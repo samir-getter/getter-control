@@ -69,7 +69,8 @@ jobs:
         with:
           name: getter-source-checks
           path: .ci-test-logs/
-          if-no-files-found: warn
+          include-hidden-files: true
+          if-no-files-found: error
 
   tests:
     name: Tests / ${{ matrix.id }}
@@ -167,4 +168,5 @@ jobs:
         with:
           name: getter-tests-${{ matrix.id }}
           path: .ci-test-logs/
-          if-no-files-found: warn
+          include-hidden-files: true
+          if-no-files-found: error

@@ -61,12 +61,25 @@ function verifyHomeInitialization(job, name) {
   if (name === "tests") assert.equal(initialize.env?.GETTER_CONTROL_TEST_LANE_ID, "${{ matrix.id }}", "Test home must use the checked lane id");
 }
 
+function verifyLogUpload(job, name) {
+  const stepName = name === "source" ? "Keep source check results on success or failure" : "Keep test results on success or failure";
+  const upload = job?.steps?.find((step) => step.name === stepName);
+  assert.equal(upload?.uses, "actions/upload-artifact@v4", "Every job must upload its check results");
+  assert.equal(upload.if, "always()", "Result upload must run on success or failure");
+  assert.notEqual(upload["continue-on-error"], true, "Artifact upload failure must fail the job");
+  assert.equal(upload.with?.path, ".ci-test-logs/", "Artifact upload must stay scoped to the check log directory");
+  assert.equal(upload.with?.["include-hidden-files"], true, "Artifact upload must include the hidden log directory");
+  assert.equal(upload.with?.["if-no-files-found"], "error", "Missing check logs must fail artifact upload");
+}
+
 export function workflowLanes(workflow) {
   assert.equal(workflow.defaults?.run?.shell, "bash", "Piped setup checks require the Bash pipefail shell");
   const job = workflow.jobs?.tests;
   assert.ok(job, "The workflow must declare its test job");
   verifyHomeInitialization(workflow.jobs.source, "source");
   verifyHomeInitialization(job, "tests");
+  verifyLogUpload(workflow.jobs.source, "source");
+  verifyLogUpload(job, "tests");
   assert.equal(job.needs, "source", "Tests must depend on the source checks");
   assert.notEqual(job["continue-on-error"], true, "Test failure must fail the job");
   assert.equal(job.strategy?.["fail-fast"], false, "One failure must not cancel other test lanes");

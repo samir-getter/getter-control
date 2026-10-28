@@ -36,7 +36,7 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const dockerfile = readFileSync(path.join(repoRoot, "Dockerfile"), "utf8");
-const workflow = readFileSync(path.join(repoRoot, ".github", "workflows", "release.yml"), "utf8");
+const workflow = readFileSync(path.join(repoRoot, ".github", "upstream-workflows", "release.yml"), "utf8");
 const serverPackageJson = JSON.parse(
   readFileSync(path.join(repoRoot, "server", "package.json"), "utf8"),
 ) as { peerDependencies?: Record<string, string> };
@@ -136,7 +136,7 @@ describe("cloud image Sentry install", () => {
 
     for (const source of [
       { label: "Dockerfile", text: dockerfile },
-      { label: "docker workflow", text: workflow },
+      { label: "archived upstream release definition", text: workflow },
     ]) {
       for (const match of source.text.matchAll(versionPinPattern)) {
         expect(

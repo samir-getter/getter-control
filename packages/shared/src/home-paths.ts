@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -6,6 +7,38 @@ export const PAPERCLIP_CONFIG_BASENAME = "config.json";
 export const PAPERCLIP_ENV_FILENAME = ".env";
 
 const PATH_SEGMENT_RE = /^[a-zA-Z0-9_-]+$/;
+
+function isAttestedLegacyWorktreeConfig(configPath: string): boolean {
+  let contents: string;
+  try {
+    contents = fs.readFileSync(path.join(path.dirname(configPath), PAPERCLIP_ENV_FILENAME), "utf8");
+  } catch {
+    return false;
+  }
+  let marker: string | undefined;
+  for (const rawLine of contents.split(/\r?\n/)) {
+    const match = rawLine.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (!match || match[1] !== "PAPERCLIP_IN_WORKTREE") continue;
+    const value = match[2].trim();
+    marker = ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))
+      ? value.slice(1, -1)
+      : value.replace(/\s+#.*$/, "").trim();
+  }
+  return marker === "true";
+}
+
+export function findPaperclipConfigFileFromAncestors(startDir: string): string | null {
+  let currentDir = path.resolve(startDir);
+  while (true) {
+    const ownConfig = path.join(currentDir, ".getter-control", PAPERCLIP_CONFIG_BASENAME);
+    if (fs.existsSync(ownConfig)) return ownConfig;
+    const worktreeConfig = path.join(currentDir, ".paperclip", PAPERCLIP_CONFIG_BASENAME);
+    if (fs.existsSync(worktreeConfig) && isAttestedLegacyWorktreeConfig(worktreeConfig)) return worktreeConfig;
+    const parentDir = path.resolve(currentDir, "..");
+    if (parentDir === currentDir) return null;
+    currentDir = parentDir;
+  }
+}
 
 export function expandHomePrefix(value: string): string {
   if (value === "~") return os.homedir();

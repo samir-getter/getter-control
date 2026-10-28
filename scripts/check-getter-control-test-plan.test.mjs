@@ -104,6 +104,31 @@ test("application homes initialize before setup through a supported step context
   assert.throws(() => workflowLanes(aliases), /Both home aliases must share/);
 });
 
+test("both uploads retain hidden logs and reject absent logs or skipped evidence", () => {
+  for (const jobName of ["source", "tests"]) {
+    for (const [field, value, message] of [
+      ["include-hidden-files", undefined, /include the hidden log directory/],
+      ["include-hidden-files", false, /include the hidden log directory/],
+      ["if-no-files-found", undefined, /Missing check logs must fail/],
+      ["if-no-files-found", "warn", /Missing check logs must fail/],
+      ["if-no-files-found", "ignore", /Missing check logs must fail/],
+      ["path", ".", /stay scoped to the check log directory/],
+    ]) {
+      const workflow = copy();
+      const upload = workflow.jobs[jobName].steps.find((step) => step.uses === "actions/upload-artifact@v4");
+      if (value === undefined) delete upload.with[field];
+      else upload.with[field] = value;
+      assert.throws(() => workflowLanes(workflow), message);
+    }
+    const skipped = copy();
+    skipped.jobs[jobName].steps.find((step) => step.uses === "actions/upload-artifact@v4").if = "success()";
+    assert.throws(() => workflowLanes(skipped), /run on success or failure/);
+    const ignored = copy();
+    ignored.jobs[jobName].steps.find((step) => step.uses === "actions/upload-artifact@v4")["continue-on-error"] = true;
+    assert.throws(() => workflowLanes(ignored), /Artifact upload failure must fail/);
+  }
+});
+
 function temporaryFixture(t) {
   const parent = realpathSync(os.tmpdir());
   const folder = realpathSync(mkdtempSync(path.join(parent, "getter-calm-ci-")));
