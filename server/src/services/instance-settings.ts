@@ -233,6 +233,7 @@ export function normalizeExperimentalSettings(raw: unknown): InstanceExperimenta
       enableIsolatedWorkspacesByDefault: parsed.data.enableIsolatedWorkspacesByDefault ?? false,
       enableStreamlinedLeftNavigation: parsed.data.enableStreamlinedLeftNavigation ?? true,
       enableStreamlinedUi: parsed.data.enableStreamlinedUi ?? true,
+      enableCalmUi: parsed.data.enableCalmUi ?? false,
       // Apps graduated from Experimental. Ignore historical off values while
       // continuing to accept the compatibility key in stored settings.
       enableApps: true,
@@ -287,6 +288,7 @@ export function normalizeExperimentalSettings(raw: unknown): InstanceExperimenta
     enableIsolatedWorkspacesByDefault: false,
     enableStreamlinedLeftNavigation: true,
     enableStreamlinedUi: true,
+    enableCalmUi: false,
     enableApps: true,
     enableMcpAggregators: true,
     enablePublicMcp: false,

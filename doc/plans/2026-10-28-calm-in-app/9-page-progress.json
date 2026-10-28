@@ -1,0 +1,1194 @@
+{
+  "baseline": "208d05cb6a00d7a76312f066d29e3a4ed77e81b6",
+  "approvedDirection": "B",
+  "routePatternsMapped": 234,
+  "uniquePages": 128,
+  "pagesCompleted": 0,
+  "shellState": "in-review",
+  "priorityEvidence": "Provisional; human usage metrics unavailable",
+  "productionFlag": "off",
+  "pages": [
+    {
+      "pattern": "/:companyPrefix/agents/:agentId",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AgentDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/agents/:agentId/:tab",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AgentDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/agents/:agentId/runs/:runId",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AgentDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/agents/active",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Agents",
+        "ProductionSurface",
+        "ProductionAgents"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/agents/all",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Agents",
+        "ProductionSurface",
+        "ProductionAgents"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/agents/builtin",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Agents",
+        "ProductionSurface",
+        "ProductionAgents"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/agents/error",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Agents",
+        "ProductionSurface",
+        "ProductionAgents"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/agents/new",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "NewAgent"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/agents/paused",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Agents",
+        "ProductionSurface",
+        "ProductionAgents"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/board-chat",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "BoardChat"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/chats",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AgentChats"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/chats/:agentRef",
+      "area": "agents",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AgentChat"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/activity",
+      "area": "audit",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanyActivity",
+        "ProductionSurface",
+        "ProductionCompanyActivity"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/activity/budgets",
+      "area": "audit",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AuditHub"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/activity/commentary",
+      "area": "audit",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AuditHub"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/activity/costs",
+      "area": "audit",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AuditHub"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/activity/runs",
+      "area": "audit",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AuditHub"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/activity/timeline",
+      "area": "audit",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AuditHub"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/costs",
+      "area": "audit",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Costs"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Browse"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/:connectionId/:tab",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AppDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/advanced",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AdvancedToolsRoute"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/advanced/:tab",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AdvancedToolsRoute"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/advanced/gateways",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "GatewaysList"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/advanced/profiles/:profileId",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProfileDetailRoute"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/advanced/profiles/:profileId/edit",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProfileWizardRoute"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/advanced/profiles/new",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProfileWizardRoute"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/app/:applicationId",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AppNotConnected"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/app/:applicationId/:tab",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AppNotConnected"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/assistant-connection",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AssistantConnection"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/byo",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AppsConnect"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/chat/:endpointId/:tab",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ChatConnectorsExperimentalGate",
+        "ChatEndpointDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/chat/:endpointId/reviews/:reviewId",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ChatConnectorsExperimentalGate",
+        "ChatEndpointDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/chat/connect",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ChatConnectorsExperimentalGate",
+        "ChatEndpointSetup"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/connect",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AppsConnectEntryRoute"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/gateways",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "GatewaysList"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/gateways/:gatewayId/:tab",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "GatewayDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/review",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AppsReview"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/apps/vercel-connect",
+      "area": "connections",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AppsConnectEntryRoute"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/artifacts",
+      "area": "knowledge",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Artifacts"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/skills/*",
+      "area": "knowledge",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanySkills",
+        "ProductionSurface",
+        "ProductionCompanySkills"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/skills/sources",
+      "area": "knowledge",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "SkillSources"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/skills/sources/:sourceId",
+      "area": "knowledge",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "SkillSources"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/skills/studio",
+      "area": "knowledge",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanySkills",
+        "SkillStudio"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/skills/studio/:skillId",
+      "area": "knowledge",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "SkillStudio"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/skills/studio/new",
+      "area": "knowledge",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "SkillStudio"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/onboarding",
+      "area": "onboarding",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "OnboardingRoutePage"
+      ]
+    },
+    {
+      "pattern": "/onboarding",
+      "area": "onboarding",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "OnboardingRoutePage"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/routines",
+      "area": "routines",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Routines",
+        "ProductionSurface",
+        "ProductionRoutines"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/routines/:routineId",
+      "area": "routines",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "RoutineDetail",
+        "ProductionSurface",
+        "ProductionRoutineDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/routines/:routineId/:section",
+      "area": "routines",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "RoutineDetail",
+        "ProductionSurface",
+        "ProductionRoutineDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/:pluginRoutePath/*",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "PluginPage"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/companies",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Companies"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/export/*",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Suspense",
+        "PaperclipLoading",
+        "CompanyExport"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/import",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanyImport"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanySettings"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/:settingsRoutePath/*",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanySettingsPluginPage"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/access",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanyAccessLegacyRoute"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/connections",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanyConnections"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/instance/access",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "InstanceAccess"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/instance/adapters",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AdapterManager"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/instance/environments",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanyEnvironments"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/instance/environments/:environmentId/edit",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanyEnvironments"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/instance/environments/new",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanyEnvironments"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/instance/experimental",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "InstanceExperimentalSettings"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/instance/plugins",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "PluginManager"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/instance/plugins/:pluginId",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "PluginSettings"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/instance/profile",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProfileSettings"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/members",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CompanyAccess"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/company/settings/secrets",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Secrets"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/design-guide",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "DesignGuide"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/dev/task-chat-lab",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "TaskChatLab"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/instance/settings/adapters",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AdapterManager"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/plugins/:pluginId",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "PluginPage"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/tests/perf/long-thread",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "IssueChatLongThreadPerf"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/u/:userSlug",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "UserProfile"
+      ]
+    },
+    {
+      "pattern": "/tests/perf/long-thread",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "IssueChatLongThreadPerf"
+      ]
+    },
+    {
+      "pattern": "/ux-lab/bootstrap-setup",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "BootstrapSetupUxLab"
+      ]
+    },
+    {
+      "pattern": "/ux-lab/cross-issue-collaboration",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CrossIssueCollaborationUxLab"
+      ]
+    },
+    {
+      "pattern": "/ux-lab/responsible-user-denial",
+      "area": "settings",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ResponsibleUserDenialUxLab"
+      ]
+    },
+    {
+      "pattern": "/assistant-connections",
+      "area": "system",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AssistantConnectionsPage"
+      ]
+    },
+    {
+      "pattern": "/auth",
+      "area": "system",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "AuthPage"
+      ]
+    },
+    {
+      "pattern": "/board-claim/:token",
+      "area": "system",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "BoardClaimPage"
+      ]
+    },
+    {
+      "pattern": "/chat-identity/confirm",
+      "area": "system",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ChatIdentityConfirm"
+      ]
+    },
+    {
+      "pattern": "/cli-auth/:id",
+      "area": "system",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CliAuthPage"
+      ]
+    },
+    {
+      "pattern": "/dot-connect/:id",
+      "area": "system",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "McpConnectPage"
+      ]
+    },
+    {
+      "pattern": "/invite/:token",
+      "area": "system",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "InviteLandingPage"
+      ]
+    },
+    {
+      "pattern": "/mcp-connect/:id",
+      "area": "system",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "McpConnectPage"
+      ]
+    },
+    {
+      "pattern": "/mcp-device",
+      "area": "system",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "McpDevicePage"
+      ]
+    },
+    {
+      "pattern": "/oauth-handoff",
+      "area": "system",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "PaperclipCloudOAuthHandoffPage"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/approvals/:approvalId",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ApprovalDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/approvals/all",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Approvals"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/approvals/pending",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Approvals"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/cases",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CasesExperimentalGate",
+        "Cases"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/cases/:caseIdentifier",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "CasesExperimentalGate",
+        "CaseDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/dashboard",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Dashboard"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/dashboard/live",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "DashboardLive"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/decisions",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "WhatNeedsMe"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/decisions/queues/:key",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "DecisionQueuePage"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/execution-workspaces/:workspaceId",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ExecutionWorkspaceDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/execution-workspaces/:workspaceId/configuration",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ExecutionWorkspaceDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/execution-workspaces/:workspaceId/issues",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ExecutionWorkspaceDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/execution-workspaces/:workspaceId/routines",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ExecutionWorkspaceDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/execution-workspaces/:workspaceId/runtime-logs",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ExecutionWorkspaceDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/execution-workspaces/:workspaceId/services",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ExecutionWorkspaceDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/goals",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Goals"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/goals/:goalId",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "GoalDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/inbox/all",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Inbox"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/inbox/blocked",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Inbox"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/inbox/mine",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Inbox"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/inbox/recent",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Inbox"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/inbox/requests",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "JoinRequestQueue"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/inbox/unread",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Inbox"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/issues",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Issues"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/issues/:issueId",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "IssueDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/projects",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Projects"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/projects/:projectId",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProjectDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/projects/:projectId/budget",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProjectDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/projects/:projectId/configuration",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProjectDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/projects/:projectId/issues",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProjectDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/projects/:projectId/issues/:filter",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProjectDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/projects/:projectId/overview",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProjectDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/projects/:projectId/workspaces",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProjectDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/projects/:projectId/workspaces/:workspaceId",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "ProjectWorkspaceDetail"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/search",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Search"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/status",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "StatusCardsExperimentalGate",
+        "StatusCards"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/status/:cardId",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "StatusCardsExperimentalGate",
+        "StatusCards"
+      ]
+    },
+    {
+      "pattern": "/:companyPrefix/workspaces",
+      "area": "work",
+      "state": "pending",
+      "source": "ui/src/App.tsx",
+      "component": [
+        "Workspaces"
+      ]
+    }
+  ]
+}

@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: getter-control-${{ github.ref }}
   cancel-in-progress: true
@@ -23,6 +27,9 @@ jobs:
   source:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      GETTER_CONTROL_HOME: ${{ runner.temp }}/getter-control-source
+      PAPERCLIP_HOME: ${{ runner.temp }}/getter-control-source
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
@@ -33,7 +40,9 @@ jobs:
           node-version: 26.12.1
           cache: pnpm
       - name: Install workspace
-        run: pnpm install --frozen-lockfile
+        run: |
+          mkdir -p .ci-test-logs
+          pnpm install --frozen-lockfile 2>&1 | tee .ci-test-logs/install.log
       - name: Select pinned Rust toolchain for every build and test
         working-directory: packages/paperclip-runner
         run: |
@@ -41,12 +50,115 @@ jobs:
           toolchain=$(rustup show active-toolchain | awk '{print $1}')
           printf 'RUSTUP_TOOLCHAIN=%s\n' "$toolchain" >> "$GITHUB_ENV"
       - name: Launcher isolation tests
-        run: pnpm test:getter-control
+        run: pnpm test:getter-control 2>&1 | tee .ci-test-logs/launcher.log
+      - name: Check complete test plan
+        run: |
+          node --test scripts/check-getter-control-test-plan.test.mjs 2>&1 | tee .ci-test-logs/test-plan-tests.log
+          node scripts/check-getter-control-test-plan.mjs | tee .ci-test-logs/test-plan.json
       - name: Build
-        run: pnpm build
+        run: pnpm build 2>&1 | tee .ci-test-logs/build.log
       - name: Typecheck
-        run: pnpm -r typecheck
-      - name: Unit and integration tests
-        run: pnpm test:run
+        run: pnpm -r typecheck 2>&1 | tee .ci-test-logs/typecheck.log
       - name: Design token checks
-        run: pnpm check:token-gates
+        run: pnpm check:token-gates 2>&1 | tee .ci-test-logs/tokens.log
+      - name: Keep source check results on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: getter-source-checks
+          path: .ci-test-logs/
+          if-no-files-found: warn
+
+  tests:
+    name: Tests / ${{ matrix.id }}
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        include:
+          - { id: server-01, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 0, shardCount: 12, native: false }
+          - { id: server-02, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 1, shardCount: 12, native: false }
+          - { id: server-03, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 2, shardCount: 12, native: false }
+          - { id: server-04, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 3, shardCount: 12, native: false }
+          - { id: server-05, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 4, shardCount: 12, native: false }
+          - { id: server-06, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 5, shardCount: 12, native: false }
+          - { id: server-07, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 6, shardCount: 12, native: false }
+          - { id: server-08, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 7, shardCount: 12, native: false }
+          - { id: server-09, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 8, shardCount: 12, native: false }
+          - { id: server-10, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 9, shardCount: 12, native: false }
+          - { id: server-11, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 10, shardCount: 12, native: false }
+          - { id: server-12, mode: general, group: general-server-without-chat-or-native-runner, shardIndex: 11, shardCount: 12, native: false }
+          - { id: chat-01, mode: general, group: general-chat, shardIndex: 0, shardCount: 3, native: false }
+          - { id: chat-02, mode: general, group: general-chat, shardIndex: 1, shardCount: 3, native: false }
+          - { id: chat-03, mode: general, group: general-chat, shardIndex: 2, shardCount: 3, native: false }
+          - { id: native-runner, mode: general, group: general-server-native-runner, shardIndex: 0, shardCount: 0, native: true }
+          - { id: ui-cli-01, mode: general, group: general-workspaces-a, shardIndex: 0, shardCount: 2, native: false }
+          - { id: ui-cli-02, mode: general, group: general-workspaces-a, shardIndex: 1, shardCount: 2, native: false }
+          - { id: packages, mode: general, group: general-workspaces-b, shardIndex: 0, shardCount: 0, native: false }
+          - { id: database, mode: general, group: general-workspaces-c, shardIndex: 0, shardCount: 0, native: false }
+          - { id: serial-01, mode: serialized, group: "", shardIndex: 0, shardCount: 9, native: false }
+          - { id: serial-02, mode: serialized, group: "", shardIndex: 1, shardCount: 9, native: false }
+          - { id: serial-03, mode: serialized, group: "", shardIndex: 2, shardCount: 9, native: false }
+          - { id: serial-04, mode: serialized, group: "", shardIndex: 3, shardCount: 9, native: false }
+          - { id: serial-05, mode: serialized, group: "", shardIndex: 4, shardCount: 9, native: false }
+          - { id: serial-06, mode: serialized, group: "", shardIndex: 5, shardCount: 9, native: false }
+          - { id: serial-07, mode: serialized, group: "", shardIndex: 6, shardCount: 9, native: false }
+          - { id: serial-08, mode: serialized, group: "", shardIndex: 7, shardCount: 9, native: false }
+          - { id: serial-09, mode: serialized, group: "", shardIndex: 8, shardCount: 9, native: false }
+    env:
+      GETTER_CONTROL_HOME: ${{ runner.temp }}/getter-control-tests-${{ matrix.id }}
+      PAPERCLIP_HOME: ${{ runner.temp }}/getter-control-tests-${{ matrix.id }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26.12.1
+          cache: pnpm
+      - name: Install workspace
+        run: |
+          mkdir -p .ci-test-logs
+          pnpm install --frozen-lockfile 2>&1 | tee .ci-test-logs/install.log
+      - name: Select pinned Rust toolchain
+        if: matrix.native
+        working-directory: packages/paperclip-runner
+        run: |
+          rustup show
+          toolchain=$(rustup show active-toolchain | awk '{print $1}')
+          printf 'RUSTUP_TOOLCHAIN=%s\n' "$toolchain" >> "$GITHUB_ENV"
+      - name: Cache native build inputs
+        if: matrix.native
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/paperclip-runner/runner/target
+          key: getter-native-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packages/paperclip-runner/rust-toolchain.toml', 'packages/paperclip-runner/runner/Cargo.lock', 'packages/paperclip-runner/runner/**/Cargo.toml', 'packages/paperclip-runner/runner/**/*.rs') }}
+      - name: Prepare native process fixtures before collection
+        if: matrix.native
+        run: |
+          pnpm run preflight:workspace-links 2>&1 | tee .ci-test-logs/native-preflight.log
+          pnpm --filter @paperclipai/paperclip-runner build:typescript 2>&1 | tee .ci-test-logs/native-typescript.log
+          pnpm --filter @paperclipai/paperclip-runner build:rust 2>&1 | tee .ci-test-logs/native-debug.log
+          cargo build --release --locked --manifest-path packages/paperclip-runner/runner/Cargo.toml -p paperclip-runner-core --bin paperclip-runnerd --bin fake-codex-app-server 2>&1 | tee .ci-test-logs/native-release.log
+          node packages/paperclip-runner/scripts/stage-runner-binary.mjs 2>&1 | tee .ci-test-logs/native-stage.log
+          test -x packages/paperclip-runner/runner/target/debug/fake-codex-app-server
+          test -x packages/paperclip-runner/runner/target/release/fake-codex-app-server
+          test -x packages/paperclip-runner/dist/bin/paperclip-runnerd
+      - name: Run checked test lane
+        env:
+          GETTER_CONTROL_TEST_LANE: ${{ toJSON(matrix) }}
+        run: node scripts/check-getter-control-test-plan.mjs --run-lane
+      - name: Keep test results on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: getter-tests-${{ matrix.id }}
+          path: .ci-test-logs/
+          if-no-files-found: warn

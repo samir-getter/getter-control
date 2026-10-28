@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 
 import { createRoot } from "react-dom/client";
+import { useEffect, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Layout } from "./Layout";
+import { queryKeys } from "../lib/queryKeys";
+import { useSidebarNavExpanded } from "./SidebarNavItem";
 
 const mockDesignSandbox = vi.hoisted(() => ({ enabled: false }));
 vi.mock("@/context/DesignSandboxContext", () => ({ useDesignSandbox: () => mockDesignSandbox.enabled }));
@@ -36,6 +39,8 @@ const mockPluginSlotContexts = vi.hoisted(
 );
 const mockSetPeeking = vi.hoisted(() => vi.fn());
 const mockSetForceCollapsed = vi.hoisted(() => vi.fn());
+const mockPrimarySidebarRender = vi.hoisted(() => vi.fn());
+const mockPrimarySidebarUnmount = vi.hoisted(() => vi.fn());
 const mockSidebarState = vi.hoisted(() => ({
   sidebarOpen: true,
   isMobile: false,
@@ -45,7 +50,7 @@ const mockSidebarState = vi.hoisted(() => ({
 let currentPathname = "/PAP/dashboard";
 
 vi.mock("@/lib/router", () => ({
-  Outlet: () => <div>Outlet content</div>,
+  Outlet: () => <div>Outlet content<textarea aria-label="Unsaved draft" defaultValue="" /></div>,
   useLocation: () => ({
     pathname: currentPathname,
     search: "",
@@ -68,15 +73,31 @@ vi.mock("@/lib/router", () => ({
 }));
 
 vi.mock("./Sidebar", () => ({
-  Sidebar: ({ contentHeaderControls }: { contentHeaderControls?: boolean }) => (
-    <div data-content-header-controls={String(contentHeaderControls ?? false)}>
-      Main company nav
-    </div>
-  ),
+  Sidebar: ({ contentHeaderControls, children }: { contentHeaderControls?: boolean; children?: ReactNode }) => {
+    mockPrimarySidebarRender();
+    useEffect(() => () => { mockPrimarySidebarUnmount(); }, []);
+    const [edits, setEdits] = useState(0);
+    return <div data-content-header-controls={String(contentHeaderControls ?? false)}>
+      Main company nav<textarea aria-label="Primary sidebar draft" defaultValue="" />
+      <button onClick={() => setEdits((value) => value + 1)}>Primary sidebar edits {edits}</button>{children}
+    </div>;
+  },
+}));
+
+vi.mock("./calm/CalmNavigation", async () => ({
+  ...(await vi.importActual<typeof import("./calm/CalmNavigation")>("./calm/CalmNavigation")),
+  CalmAreaTabs: () => <nav data-calm-area-tabs>Area pages</nav>,
 }));
 
 vi.mock("./CompanySettingsSidebar", () => ({
-  CompanySettingsSidebar: () => <div>Company settings sidebar</div>,
+  CompanySettingsSidebar: () => {
+    const [edits, setEdits] = useState(0);
+    const expanded = useSidebarNavExpanded();
+    return <div data-context-expanded={String(expanded)}>Company settings sidebar
+      <textarea aria-label="Context sidebar draft" defaultValue="" />
+      <button onClick={() => setEdits((value) => value + 1)}>Context sidebar edits {edits}</button>
+    </div>;
+  },
 }));
 
 vi.mock("./AppsSidebar", () => ({
@@ -200,9 +221,13 @@ vi.mock("../plugins/slots", async () => {
       className?: string;
     }) => {
       mockPluginSlotContexts.push(context);
+      const [edits, setEdits] = useState(0);
+      const expanded = useSidebarNavExpanded();
       return (
-        <div data-plugin-slot-class={className}>
+        <div data-plugin-slot-class={className} data-context-expanded={String(expanded)}>
           Plugin route sidebar: {slot.displayName}
+          <textarea aria-label="Context sidebar draft" defaultValue="" />
+          <button onClick={() => setEdits((value) => value + 1)}>Context sidebar edits {edits}</button>
         </div>
       );
     },
@@ -300,10 +325,10 @@ async function flushReact() {
   });
 }
 
-function renderLayoutView(root: ReturnType<typeof createRoot>, queryClient: QueryClient) {
+function renderLayoutView(root: ReturnType<typeof createRoot>, queryClient: QueryClient, sidebarSections?: ReactNode) {
   root.render(
     <QueryClientProvider client={queryClient}>
-      <Layout />
+      <Layout sidebarSections={sidebarSections} />
     </QueryClientProvider>,
   );
 }
@@ -351,6 +376,182 @@ describe("Layout", () => {
     container.remove();
     document.body.innerHTML = "";
     vi.clearAllMocks();
+  });
+
+  it.each([false, true])("retains the legacy Dashboard-to-Settings lifecycle until CALM opt-in: %s", async (optIn) => {
+    const settings = { enableStreamlinedUi: true, enableCalmUi: false, enableDecisions: true };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    client.setQueryData(queryKeys.instance.experimentalSettings, settings);
+    const root = createRoot(container);
+    await act(() => { renderLayoutView(root, client); });
+    await flushReact();
+    const draft = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="Primary sidebar draft"]')!;
+    expect(draft).not.toBeNull();
+    draft.value = "Unsent notes before navigation";
+    await act(() => {
+      Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === "Primary sidebar edits 0")!.click();
+    });
+    if (optIn) {
+      await act(() => { client.setQueryData(queryKeys.instance.experimentalSettings, { ...settings, enableCalmUi: true }); });
+      await flushReact();
+      await flushReact();
+      expect(container.querySelector('textarea[aria-label="Primary sidebar draft"]')).toBe(draft);
+    }
+    currentPathname = "/PAP/company/settings";
+    await act(() => {
+      client.setQueryData(queryKeys.instance.experimentalSettings, settings);
+      renderLayoutView(root, client);
+    });
+    await flushReact();
+    await flushReact();
+    const parking = container.querySelector('[data-navigation-region-parking="layout-primary-sidebar"]')!;
+    if (optIn) {
+      expect(mockPrimarySidebarUnmount).not.toHaveBeenCalled();
+      expect(parking.querySelector('textarea[aria-label="Primary sidebar draft"]')).toBe(draft);
+      expect(parking.hasAttribute("hidden")).toBe(true);
+      expect(parking.hasAttribute("inert")).toBe(true);
+      expect(draft.value).toBe("Unsent notes before navigation");
+      expect(parking.textContent).toContain("Primary sidebar edits 1");
+      await act(() => { client.setQueryData(queryKeys.instance.experimentalSettings, { ...settings, enableCalmUi: true }); });
+      await flushReact();
+      expect(container.querySelector('textarea[aria-label="Primary sidebar draft"]')).toBe(draft);
+      expect(draft.closest('[inert], [hidden]')).toBeNull();
+    } else {
+      expect(mockPrimarySidebarUnmount).toHaveBeenCalledTimes(1);
+      expect(container.querySelector('textarea[aria-label="Primary sidebar draft"]')).toBeNull();
+      expect(parking.textContent).toBe("");
+    }
+    expect(container.querySelector('textarea[aria-label="Context sidebar draft"]')).not.toBeNull();
+    await act(() => { root.unmount(); });
+    client.clear();
+  });
+
+  it.each([
+    ["/PAP/company/settings", false], ["/PAP/company/settings", true],
+    ["/PAP/wiki", false], ["/PAP/wiki", true],
+  ] as const)("preserves primary and contextual sidebar drafts across CALM host swaps on %s, initial %s", async (pathname, initialCalm) => {
+    currentPathname = pathname;
+    if (pathname.endsWith("/wiki")) {
+      const plugin = { routePath: "wiki", pluginId: "plugin-1", pluginKey: "wiki-plugin", pluginDisplayName: "Wiki Plugin", pluginVersion: "1.0.0" };
+      mockPluginSlots.slots = [
+        { ...plugin, type: "page", id: "wiki-page", displayName: "Wiki Page", exportName: "WikiPage" },
+        { ...plugin, type: "routeSidebar", id: "wiki-sidebar", displayName: "Wiki Sidebar", exportName: "WikiSidebar" },
+      ];
+    }
+    function CustomSections() {
+      const [edits, setEdits] = useState(0);
+      return <div><textarea aria-label="Custom sections draft" defaultValue="" />
+        <button onClick={() => setEdits((value) => value + 1)}>Custom sections edits {edits}</button></div>;
+    }
+    const settings = { enableStreamlinedUi: true, enableCalmUi: initialCalm, enableApps: true };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    client.setQueryData(queryKeys.instance.experimentalSettings, settings);
+    const root = createRoot(container);
+    await act(() => { renderLayoutView(root, client, <CustomSections />); });
+    await flushReact();
+    const contextDraft = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="Context sidebar draft"]')!;
+    expect(contextDraft).not.toBeNull();
+    expect(contextDraft.closest('[data-context-expanded]')?.getAttribute("data-context-expanded")).toBe("true");
+    contextDraft.value = "Unsent contextual notes";
+    await act(() => {
+      Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === "Context sidebar edits 0")!.click();
+    });
+    if (!initialCalm) {
+      expect(mockPrimarySidebarRender).not.toHaveBeenCalled();
+      expect(container.querySelector('textarea[aria-label="Primary sidebar draft"]')).toBeNull();
+      expect(container.querySelector('textarea[aria-label="Custom sections draft"]')).toBeNull();
+      await act(() => { client.setQueryData(queryKeys.instance.experimentalSettings, { ...settings, enableCalmUi: true }); });
+      await flushReact();
+      await flushReact();
+    }
+    const primaryDraft = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="Primary sidebar draft"]')!;
+    const customDraft = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="Custom sections draft"]')!;
+    primaryDraft.value = "Unsent primary notes";
+    customDraft.value = "Unsent custom section notes";
+    await act(() => {
+      for (const label of ["Primary sidebar edits 0", "Custom sections edits 0"])
+        Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === label)!.click();
+    });
+    for (const enabled of [false, true, false, true]) {
+      await act(() => { client.setQueryData(queryKeys.instance.experimentalSettings, { ...settings, enableCalmUi: enabled }); });
+      await flushReact();
+      await flushReact();
+      expect(container.querySelector('textarea[aria-label="Primary sidebar draft"]')).toBe(primaryDraft);
+      expect(container.querySelector('textarea[aria-label="Custom sections draft"]')).toBe(customDraft);
+      expect(container.querySelector('textarea[aria-label="Context sidebar draft"]')).toBe(contextDraft);
+      expect(primaryDraft.value).toBe("Unsent primary notes");
+      expect(customDraft.value).toBe("Unsent custom section notes");
+      expect(contextDraft.value).toBe("Unsent contextual notes");
+      for (const label of ["Primary sidebar edits 1", "Custom sections edits 1", "Context sidebar edits 1"])
+        expect(container.textContent).toContain(label);
+      expect(contextDraft.closest('[inert], [hidden]')).toBeNull();
+      expect(contextDraft.closest('[data-context-expanded]')?.getAttribute("data-context-expanded")).toBe("true");
+      const parking = primaryDraft.closest('[data-navigation-region-parking="layout-primary-sidebar"]');
+      if (enabled) {
+        expect(parking).toBeNull();
+        expect(contextDraft.closest(".app-content-row")).not.toBeNull();
+      } else {
+        expect(parking?.hasAttribute("hidden")).toBe(true);
+        expect(parking?.hasAttribute("inert")).toBe(true);
+        expect(parking?.getAttribute("aria-hidden")).toBe("true");
+        expect(contextDraft.closest(".sidebar-shell")).not.toBeNull();
+      }
+      expect(document.body.style.pointerEvents).not.toBe("none");
+    }
+    await act(() => { root.unmount(); });
+    client.clear();
+    expect(container.querySelector('textarea[aria-label="Primary sidebar draft"]')).toBeNull();
+    expect(container.querySelector('textarea[aria-label="Context sidebar draft"]')).toBeNull();
+  });
+
+  it.each(["/PAP/dashboard", "/PAP/issues/PAP-1", "/PAP/company/settings"])(
+    "preserves the mounted page and draft during CALM rollback on %s",
+    async (pathname) => {
+      currentPathname = pathname;
+      const root = createRoot(container);
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+      const settings = { enableApps: true, enableStreamlinedUi: true, enableCalmUi: false };
+      queryClient.setQueryData(queryKeys.instance.experimentalSettings, settings);
+      await act(() => { renderLayoutView(root, queryClient); });
+      await flushReact();
+      const draft = container.querySelector<HTMLTextAreaElement>("textarea[aria-label='Unsaved draft']")!;
+      draft.value = "A draft that has not been saved";
+      expect(container.querySelector(".calm-shell")).toBeNull();
+
+      await act(() => { queryClient.setQueryData(queryKeys.instance.experimentalSettings, { ...settings, enableCalmUi: true }); });
+      await flushReact();
+      await flushReact();
+      expect(container.querySelector(".calm-shell")).not.toBeNull();
+      expect(container.querySelector("[data-calm-area-tabs]")).not.toBeNull();
+      expect(container.querySelector("textarea[aria-label='Unsaved draft']")).toBe(draft);
+      expect(draft.value).toBe("A draft that has not been saved");
+      if (pathname.includes("company/settings")) {
+        expect(container.textContent).toContain("Main company nav");
+        expect(container.textContent).toContain("Company settings sidebar");
+      }
+
+      await act(() => { queryClient.setQueryData(queryKeys.instance.experimentalSettings, settings); });
+      await flushReact();
+      await flushReact();
+      expect(container.querySelector(".calm-shell")).toBeNull();
+      expect(container.querySelector("textarea[aria-label='Unsaved draft']")).toBe(draft);
+      expect(draft.value).toBe("A draft that has not been saved");
+      expect(currentPathname).toBe(pathname);
+      expect(mockCompanyState.selectedCompanyId).toBe("company-1");
+      await act(() => { root.unmount(); });
+    },
+  );
+
+  it("keeps the legacy shell when Streamlined is disabled even if CALM is true", async () => {
+    const root = createRoot(container);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    queryClient.setQueryData(queryKeys.instance.experimentalSettings, { enableCalmUi: true, enableStreamlinedUi: false });
+    await act(() => { renderLayoutView(root, queryClient); });
+    await flushReact();
+    expect(container.querySelector(".calm-shell")).toBeNull();
+    expect(container.querySelector("[data-calm-area-tabs]")).toBeNull();
+    expect(container.textContent).toContain("Outlet content");
+    await act(() => { root.unmount(); });
   });
 
   it("does not render the deployment explainer in the shared layout", async () => {

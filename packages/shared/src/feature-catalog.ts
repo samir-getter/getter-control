@@ -113,6 +113,14 @@ export const INSTANCE_FEATURE_CATALOG: Record<InstanceFeatureKey, FeatureCatalog
     cloudDefault: true,
     selfHostedDefault: true,
   },
+  enableCalmUi: {
+    title: "CALM UI",
+    description:
+      "Use the CALM shell with area navigation, contextual tabs, and a focused mobile dock. Requires Streamlined UI.",
+    tier: "preference",
+    cloudDefault: false,
+    selfHostedDefault: false,
+  },
   enablePublicMcp: {
     title: "Assistant connections (MCP)",
     description: "Let external assistants connect as a person to review work, delegate tasks, add feedback, and follow results.",

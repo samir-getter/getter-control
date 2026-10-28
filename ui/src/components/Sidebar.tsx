@@ -42,6 +42,8 @@ import { queryKeys } from "../lib/queryKeys";
 import { attentionBadgeCount } from "../lib/attention";
 import { useInboxBadge } from "../hooks/useInboxBadge";
 import { useStreamlinedUiEnabled } from "../hooks/useStreamlinedUiEnabled";
+import { useCalmUiEnabled } from "../hooks/useCalmUiEnabled";
+import { CalmSidebarNavigation, usePersistentNavigationRegion } from "./calm/CalmNavigation";
 import { usePublishSharedQueryData, useSharedPollingQuery } from "../hooks/useSharedPolling";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn, SIDEBAR_RAIL_HIDDEN_LABEL } from "../lib/utils";
@@ -60,6 +62,14 @@ export function Sidebar({ children }: { children?: ReactNode }) {
   const { selectedCompanyId, selectedCompany } = useCompany();
   const { collapsed, peeking } = useSidebar();
   const { enabled: streamlinedUiEnabled } = useStreamlinedUiEnabled();
+  const { enabled: calmUiEnabled } = useCalmUiEnabled();
+  const calmEnabled = calmUiEnabled && streamlinedUiEnabled;
+  const starredRegion = usePersistentNavigationRegion("sidebar-starred");
+  const agentsRegion = usePersistentNavigationRegion("sidebar-agents");
+  const recentRegion = usePersistentNavigationRegion("sidebar-recent");
+  const pluginsRegion = usePersistentNavigationRegion("sidebar-plugins");
+  const launchersRegion = usePersistentNavigationRegion("sidebar-launchers");
+  const panelsRegion = usePersistentNavigationRegion("sidebar-panels");
   const rail = collapsed && !peeking;
   const inboxBadge = useInboxBadge(selectedCompanyId);
   const { data: experimentalSettings } = useQuery({
@@ -128,6 +138,7 @@ export function Sidebar({ children }: { children?: ReactNode }) {
     <aside
       className={cn(
         "w-full h-full min-h-0 flex flex-col",
+        calmEnabled && "calm-sidebar",
         streamlinedUiEnabled
           ? primarySidebarStyles.surface
           : "border-r border-border bg-background",
@@ -138,11 +149,20 @@ export function Sidebar({ children }: { children?: ReactNode }) {
           the header's spare width goes to the workspace/organization name,
           which is the user's orientation anchor and truncates otherwise.
           Search is the first nav item below instead. */}
-      <div className="flex h-(--sz-60px) shrink-0 items-center gap-1 px-3">
-        <SidebarCompanyMenu />
+      <div className={cn("flex h-(--sz-60px) shrink-0 items-center gap-1 px-3", calmEnabled && "calm-company-switcher")}>
+        <SidebarCompanyMenu showChevron={!calmEnabled} />
       </div>
 
-      <nav className={primarySidebarStyles.nav}>
+      {calmEnabled ? <CalmSidebarNavigation settings={experimentalSettings} unread={inboxBadge.inbox} failed={inboxBadge.failedRuns > 0}>
+        <SidebarNavItem to="/dashboard" label="Live work" icon={LayoutDashboard} liveCount={liveRunCount} />
+        {showDecisions ? <SidebarNavItem to="/decisions" label="Decisions" icon={CircleCheck} badge={attentionCount} /> : null}
+        {starredRegion.contentHost}
+        {agentsRegion.contentHost}
+        {recentRegion.contentHost}
+        {pluginsRegion.contentHost}
+        {launchersRegion.contentHost}
+        {panelsRegion.contentHost}
+      </CalmSidebarNavigation> : <nav className={primarySidebarStyles.nav}>
         <div className={primarySidebarStyles.group}>
           {/* New Task button aligned with nav items */}
           {(() => {
@@ -228,7 +248,7 @@ export function Sidebar({ children }: { children?: ReactNode }) {
           {streamlinedUiEnabled ? (
             <>
               <SidebarNavItem to="/projects" label="Projects" icon={FolderOpen} />
-              <SidebarStarredProjects />
+              {starredRegion.contentHost}
             </>
           ) : null}
           <SidebarNavItem to="/routines" label="Routines" icon={Repeat} />
@@ -248,21 +268,8 @@ export function Sidebar({ children }: { children?: ReactNode }) {
           {showWorkspacesLink ? (
             <SidebarNavItem to="/workspaces" label="Workspaces" icon={GitBranch} />
           ) : null}
-          <PluginSlotOutlet
-            errorBehavior="hidden"
-            slotTypes={["sidebar"]}
-            context={pluginContext}
-            className="flex flex-col gap-0.5"
-            itemClassName="text-(length:--text-compact) font-medium"
-            missingBehavior="placeholder"
-          />
-          <PluginLauncherOutlet
-            errorBehavior="hidden"
-            placementZones={["sidebar"]}
-            context={pluginContext}
-            className="flex flex-col gap-0.5"
-            itemClassName="text-(length:--text-compact) font-medium"
-          />
+          {pluginsRegion.contentHost}
+          {launchersRegion.contentHost}
         </SidebarSection>
 
         {streamlinedUiEnabled ? (
@@ -277,10 +284,10 @@ export function Sidebar({ children }: { children?: ReactNode }) {
           </SidebarSection>
         ) : null}
 
-        {children ?? (streamlinedUiEnabled ? <SidebarAgents streamlined /> : null)}
+        {agentsRegion.contentHost}
 
         {streamlinedUiEnabled ? (
-          <SidebarRecentTasks companyId={selectedCompanyId} liveIssueIds={liveIssueIds} />
+          recentRegion.contentHost
         ) : (
           <>
             <SidebarProjects />
@@ -300,15 +307,22 @@ export function Sidebar({ children }: { children?: ReactNode }) {
           </>
         )}
 
-        <PluginSlotOutlet
-          errorBehavior="hidden"
-          slotTypes={["sidebarPanel"]}
-          context={pluginContext}
-          className="flex flex-col gap-3"
-          itemClassName="rounded-lg border border-border p-3"
-          missingBehavior="placeholder"
-        />
-      </nav>
+        {panelsRegion.contentHost}
+      </nav>}
+
+      {/* Owners stay outside the visual flag. Each host occupies its original
+          legacy position or the persistent More region in CALM. */}
+      {starredRegion.parkingHost}{agentsRegion.parkingHost}{recentRegion.parkingHost}
+      {pluginsRegion.parkingHost}{launchersRegion.parkingHost}{panelsRegion.parkingHost}
+      {starredRegion.renderContent(streamlinedUiEnabled ? <SidebarStarredProjects /> : null)}
+      {agentsRegion.renderContent(children ?? (streamlinedUiEnabled ? <SidebarAgents streamlined /> : null))}
+      {recentRegion.renderContent(streamlinedUiEnabled ? <SidebarRecentTasks companyId={selectedCompanyId} liveIssueIds={liveIssueIds} /> : null)}
+      {pluginsRegion.renderContent(<PluginSlotOutlet errorBehavior="hidden" slotTypes={["sidebar"]} context={pluginContext}
+        className="flex flex-col gap-0.5" itemClassName="text-(length:--text-compact) font-medium" missingBehavior="placeholder" />)}
+      {launchersRegion.renderContent(<PluginLauncherOutlet errorBehavior="hidden" placementZones={["sidebar"]} context={pluginContext}
+        className="flex flex-col gap-0.5" itemClassName="text-(length:--text-compact) font-medium" />)}
+      {panelsRegion.renderContent(<PluginSlotOutlet errorBehavior="hidden" slotTypes={["sidebarPanel"]} context={pluginContext}
+        className="flex flex-col gap-3" itemClassName="rounded-lg border border-border p-3" missingBehavior="placeholder" />)}
     </aside>
   );
 }

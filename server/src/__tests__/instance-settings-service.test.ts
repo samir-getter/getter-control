@@ -7,6 +7,19 @@ import {
 } from "../services/instance-settings.js";
 
 describe("instance settings service", () => {
+  it("keeps CALM off for missing or malformed settings and preserves explicit opt-in and rollback", () => {
+    for (const stored of [undefined, null, {}, { enableCalmUi: "true" },
+      { enableCalmUi: true, enableCases: "invalid" }]) {
+      expect(normalizeExperimentalSettings(stored).enableCalmUi).toBe(false);
+    }
+    const enabled = applyExperimentalSettingsPatch({}, { enableCalmUi: true });
+    const restored = normalizeExperimentalSettings(JSON.parse(JSON.stringify(enabled)));
+    expect(restored.enableCalmUi).toBe(true);
+    const disabled = applyExperimentalSettingsPatch(restored, { enableCalmUi: false });
+    expect(normalizeExperimentalSettings(JSON.parse(JSON.stringify(disabled)))).toMatchObject({
+      enableCalmUi: false, enableStreamlinedUi: true,
+    });
+  });
   it("keeps Notebook off for legacy or invalid settings and round-trips explicit operator choices", () => {
     for (const stored of [undefined, null, {}, { enableApps: true },
       { enablePaperclipNotebook: "true" }, { enablePaperclipNotebook: 1 },
@@ -68,6 +81,7 @@ describe("instance settings service", () => {
       enableIsolatedWorkspacesByDefault: false,
       enableStreamlinedLeftNavigation: true,
       enableStreamlinedUi: true,
+      enableCalmUi: false,
       enableApps: true,
     enableMcpAggregators: true,
       enableAgentChat: false,

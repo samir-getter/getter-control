@@ -222,6 +222,36 @@ describe("CommandPalette", () => {
     container.remove();
   });
 
+  it("retains legacy Pages aliases and entity search while adding CALM areas", async () => {
+    const settings = { enableCalmUi: true, enableStreamlinedUi: true, enableCombinedInboxTasks: true };
+    const agents = [{ id: "agent-1", name: "Routine operator", role: "worker" }];
+    const projects = [{ id: "project-1", name: "Assembly improvements" }];
+    const issues = [{ id: "issue-1", identifier: "PAP-24", title: "Review assembly draft" }];
+    mockInstanceSettingsApi.getExperimental.mockResolvedValue(settings);
+    mockAgentsApi.list.mockResolvedValue(agents);
+    mockProjectsApi.list.mockResolvedValue(projects);
+    mockIssuesApi.list.mockResolvedValue(issues);
+    const { root } = renderWithQueryClient(<CommandPalette />, container, (client) => {
+      client.setQueryData(queryKeys.instance.experimentalSettings, settings);
+      client.setQueryData(queryKeys.agents.list("company-1"), agents);
+      client.setQueryData(queryKeys.projects.list("company-1"), projects);
+      client.setQueryData(queryKeys.issues.list("company-1"), issues);
+    });
+    act(() => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true })); });
+    await waitForAssertion(() => {
+      for (const label of ["Dashboard", "My work", "Tasks", "Projects", "Goals", "Agents", "Costs", "Activity", "Routines", "Artifacts", "Connectors", "Advanced tools"])
+        expect(container.textContent).toContain(label);
+      for (const label of ["Routine operator", "Assembly improvements", "Review assembly draft"])
+        expect(container.textContent).toContain(label);
+    });
+    const buttons = [...container.querySelectorAll<HTMLButtonElement>("button")];
+    const myWork = buttons.find((button) => button.textContent === "My work");
+    expect(myWork).toBeDefined();
+    act(() => { myWork!.click(); });
+    expect(navigateState.navigate).toHaveBeenCalledWith("/issues?view=mine");
+    act(() => { root.unmount(); });
+  });
+
   it("includes routine execution issues in search queries", async () => {
     const { root } = renderWithQueryClient(<CommandPalette />, container);
 
