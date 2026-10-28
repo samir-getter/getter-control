@@ -4,7 +4,8 @@
   "routePatternsMapped": 234,
   "uniquePages": 128,
   "pagesCompleted": 0,
-  "shellState": "in-review",
+  "shellState": "draft-pr-full-verification",
+  "shellPullRequest": "https://github.com/samir-getter/getter-control/pull/1",
   "priorityEvidence": "Provisional; human usage metrics unavailable",
   "productionFlag": "off",
   "pages": [

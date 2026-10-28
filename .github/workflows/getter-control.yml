@@ -27,10 +27,12 @@ jobs:
   source:
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    env:
-      GETTER_CONTROL_HOME: ${{ runner.temp }}/getter-control-source
-      PAPERCLIP_HOME: ${{ runner.temp }}/getter-control-source
     steps:
+      - name: Initialize isolated application home
+        run: |
+          calm_home="$RUNNER_TEMP/getter-control-source"
+          mkdir -p "$calm_home"
+          printf 'GETTER_CONTROL_HOME=%s\nPAPERCLIP_HOME=%s\n' "$calm_home" "$calm_home" >> "$GITHUB_ENV"
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
@@ -108,10 +110,14 @@ jobs:
           - { id: serial-07, mode: serialized, group: "", shardIndex: 6, shardCount: 9, native: false }
           - { id: serial-08, mode: serialized, group: "", shardIndex: 7, shardCount: 9, native: false }
           - { id: serial-09, mode: serialized, group: "", shardIndex: 8, shardCount: 9, native: false }
-    env:
-      GETTER_CONTROL_HOME: ${{ runner.temp }}/getter-control-tests-${{ matrix.id }}
-      PAPERCLIP_HOME: ${{ runner.temp }}/getter-control-tests-${{ matrix.id }}
     steps:
+      - name: Initialize isolated application home
+        env:
+          GETTER_CONTROL_TEST_LANE_ID: ${{ matrix.id }}
+        run: |
+          calm_home="$RUNNER_TEMP/getter-control-tests-$GETTER_CONTROL_TEST_LANE_ID"
+          mkdir -p "$calm_home"
+          printf 'GETTER_CONTROL_HOME=%s\nPAPERCLIP_HOME=%s\n' "$calm_home" "$calm_home" >> "$GITHUB_ENV"
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:

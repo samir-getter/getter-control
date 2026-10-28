@@ -2,7 +2,7 @@
 
 User approved direction B on 2026-10-28. Navigation covers all 234 existing route patterns. This checklist counts 128 unique registered page patterns; duplicated conditional registrations are not counted twice.
 
-**Page bodies completed: 0 of 128.** The shell is in review. A mapped destination is not a completed page redesign.
+**Page bodies completed: 0 of 128.** The shell is in [draft PR #1](https://github.com/samir-getter/getter-control/pull/1). CI execution repairs passed independent review; full CI results remain required. A mapped destination is not a completed page redesign.
 
 | Area | Unique page patterns | Page bodies done | Delivery |
 | --- | ---: | ---: | --- |

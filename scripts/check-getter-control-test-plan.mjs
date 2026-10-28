@@ -47,10 +47,26 @@ function validateLane(lane) {
   }
 }
 
+function verifyHomeInitialization(job, name) {
+  assert.equal(job?.env?.GETTER_CONTROL_HOME, undefined, "Initialize application homes in a step, not job-level env");
+  assert.equal(job?.env?.PAPERCLIP_HOME, undefined, "Initialize application homes in a step, not job-level env");
+  const initialize = job?.steps?.find((step) => step.name === "Initialize isolated application home");
+  assert.ok(initialize && job.steps.indexOf(initialize) < job.steps.findIndex((step) => step.name === "Install workspace"), "Initialize an isolated home before workspace setup");
+  assert.equal(initialize.if, undefined, "Every job must initialize an isolated home");
+  assert.notEqual(initialize["continue-on-error"], true, "Home initialization must succeed");
+  const folder = name === "source" ? "getter-control-source" : "getter-control-tests-$GETTER_CONTROL_TEST_LANE_ID";
+  assert.ok(initialize.run?.includes('calm_home="$RUNNER_TEMP/' + folder + '"'), "Home must use the runner temporary directory");
+  assert.ok(initialize.run.includes('mkdir -p "$calm_home"'), "Create the isolated application home");
+  assert.ok(initialize.run.includes("printf 'GETTER_CONTROL_HOME=%s\\nPAPERCLIP_HOME=%s\\n' \"$calm_home\" \"$calm_home\" >> \"$GITHUB_ENV\""), "Both home aliases must share the isolated job home");
+  if (name === "tests") assert.equal(initialize.env?.GETTER_CONTROL_TEST_LANE_ID, "${{ matrix.id }}", "Test home must use the checked lane id");
+}
+
 export function workflowLanes(workflow) {
   assert.equal(workflow.defaults?.run?.shell, "bash", "Piped setup checks require the Bash pipefail shell");
   const job = workflow.jobs?.tests;
   assert.ok(job, "The workflow must declare its test job");
+  verifyHomeInitialization(workflow.jobs.source, "source");
+  verifyHomeInitialization(job, "tests");
   assert.equal(job.needs, "source", "Tests must depend on the source checks");
   assert.notEqual(job["continue-on-error"], true, "Test failure must fail the job");
   assert.equal(job.strategy?.["fail-fast"], false, "One failure must not cancel other test lanes");
@@ -212,25 +228,26 @@ export function verifyTestPlan(workflow = readTestWorkflow(), plan = createRunne
   };
 }
 
-async function runLane() {
-  const requested = JSON.parse(process.env.GETTER_CONTROL_TEST_LANE ?? "null");
-  assert.ok(requested, "GETTER_CONTROL_TEST_LANE must contain a matrix lane");
-  validateLane(requested);
-  const lane = workflowLanes(readTestWorkflow()).find((candidate) => candidate.id === requested.id);
-  assert.deepEqual(requested, lane, "Executed lane must match the checked workflow matrix");
-  assert.equal(process.env.PAPERCLIP_TEST_DATABASE_URL, undefined, "These lanes require per-job embedded test databases");
+export async function executeTestLane(lane, {
+  cwd = root, logDir = path.join(root, ".ci-test-logs"),
+  environment = process.env, executable = "pnpm", executableArguments = [],
+} = {}) {
+  validateLane(lane);
+  assert.equal(environment.PAPERCLIP_TEST_DATABASE_URL, undefined, "These lanes require per-job embedded test databases");
+  const childEnvironment = { ...environment };
+  delete childEnvironment.GETTER_CONTROL_HOME;
   const args = [
     lane.mode === "serialized" ? "test:run:serialized" : "test:run:general", "--",
     ...(lane.group ? ["--group", lane.group] : []),
     ...(lane.shardCount ? ["--shard-index", String(lane.shardIndex), "--shard-count", String(lane.shardCount)] : []),
   ];
-  const logDir = path.join(root, ".ci-test-logs");
   mkdirSync(logDir, { recursive: true });
   const log = createWriteStream(path.join(logDir, lane.id + ".log"));
   const startedAt = new Date().toISOString();
   const start = Date.now();
-  console.log("[getter-tests] pnpm " + args.join(" "));
-  const child = spawn("pnpm", args, { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+  const command = [executable, ...executableArguments, ...args];
+  console.log("[getter-tests] " + command.join(" "));
+  const child = spawn(executable, [...executableArguments, ...args], { cwd, env: childEnvironment, stdio: ["ignore", "pipe", "pipe"] });
   child.stdout.on("data", (chunk) => { process.stdout.write(chunk); log.write(chunk); });
   child.stderr.on("data", (chunk) => { process.stderr.write(chunk); log.write(chunk); });
   let code;
@@ -244,19 +261,30 @@ async function runLane() {
   } catch (error) {
     failure = error.message;
     code = 1;
-    const message = "[getter-tests] Could not execute pnpm: " + failure + "\n";
+    const message = "[getter-tests] Could not execute test command: " + failure + "\n";
     process.stderr.write(message);
     log.write(message);
   } finally {
     await new Promise((resolve) => log.end(resolve));
   }
-  writeFileSync(path.join(logDir, lane.id + ".json"), JSON.stringify({
-    lane, command: ["pnpm", ...args], sourceSha: process.env.GITHUB_SHA ?? null,
+  const result = {
+    lane, command, sourceSha: environment.GITHUB_SHA ?? null,
     nodeVersion: process.version, platform: process.platform, arch: process.arch,
     startedAt, finishedAt: new Date().toISOString(), elapsedMs: Date.now() - start,
     exitCode: code, signal, failure,
-  }, null, 2) + "\n");
-  process.exitCode = code ?? 1;
+  };
+  writeFileSync(path.join(logDir, lane.id + ".json"), JSON.stringify(result, null, 2) + "\n");
+  return result;
+}
+
+async function runLane() {
+  const requested = JSON.parse(process.env.GETTER_CONTROL_TEST_LANE ?? "null");
+  assert.ok(requested, "GETTER_CONTROL_TEST_LANE must contain a matrix lane");
+  validateLane(requested);
+  const lane = workflowLanes(readTestWorkflow()).find((candidate) => candidate.id === requested.id);
+  assert.deepEqual(requested, lane, "Executed lane must match the checked workflow matrix");
+  const result = await executeTestLane(lane);
+  process.exitCode = result.exitCode ?? 1;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
