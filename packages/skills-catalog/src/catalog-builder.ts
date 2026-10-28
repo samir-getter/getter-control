@@ -753,8 +753,9 @@ function readStringArrayField(
 
 function classifyCatalogFile(relativePath: string): CatalogSkillFileKind {
   if (relativePath === SKILL_ENTRYPOINT) return "skill";
-  if (relativePath.startsWith("references/")) return "reference";
   if (relativePath.startsWith("scripts/")) return "script";
+  if (/\.(?:avif|bmp|gif|ico|jpe?g|png|webp)$/i.test(relativePath)) return "asset";
+  if (relativePath.startsWith("references/")) return "reference";
   if (relativePath.startsWith("assets/")) return "asset";
   if (relativePath.endsWith(".md") || relativePath.endsWith(".mdx")) return "markdown";
   return "other";

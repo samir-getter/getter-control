@@ -44,6 +44,8 @@ The Getter launcher sets absolute config/context paths and disables the checkout
 
 ## Distribution and CI
 
+Getter's global skills catalog includes Hallmark 2.0.0 as the first company bootstrap default. Startup and new-company creation reconcile missing defaults into each company library, preserving existing copies and agent assignments. See [Global skills and company synchronization](GETTER-CONTROL-SKILLS.md) for source pins, dependencies and update behavior.
+
 There is no Getter npm package, installer or automatic binary update channel yet. All managed installation, payload updates, rollback, uninstall and system service entry points are guarded because the upstream shim/service names are not a separate Getter distribution. Source updates remain manual in this checkout. Original helpers and package namespaces are retained for compatibility and future packaging.
 
 The UI presents Getter Control in document titles, PWA metadata, authentication and bootstrap/error screens. Internal `@paperclipai/*`, REST `/api`, adapter identifiers and `.paperclip.yaml` remain unchanged. Paperclip Cloud names refer to that optional upstream service, not to a Getter cloud deployment.

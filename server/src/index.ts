@@ -1850,6 +1850,14 @@ async function startServerWithDatabaseTeardown(
           logger.error({ err, startupStep: name }, "startup housekeeping step failed");
         }
       };
+      if (process.env.GETTER_CONTROL_DEFAULT_SKILLS === "1") {
+        await step("company_catalog_defaults", async () => {
+          const { companyCatalogDefaultsService } = await import("./services/company-catalog-defaults.js");
+          return companyCatalogDefaultsService(db).syncAll({
+            shouldStop: () => heartbeatSchedulerStopped || isIdleTaskDrainActive() || isWarmStandby(),
+          });
+        });
+      }
       await step("secret_proposal_expiry", () => registerSecretProposalExpiryWork(deliveryWork, secretProposals,
         () => !isIdleTaskDrainActive() && !heartbeatSchedulerStopped && !isWarmStandby()).ready);
       await step("custom_image_setup_cleanup", () => registerCustomImageCleanupWork(deliveryWork, environmentCustomImages,

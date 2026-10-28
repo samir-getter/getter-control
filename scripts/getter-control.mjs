@@ -97,6 +97,7 @@ export function childEnvironment(options, source = process.env) {
   return {
     ...env,
     GETTER_CONTROL_HOME: options.home,
+    GETTER_CONTROL_DEFAULT_SKILLS: "1",
     PAPERCLIP_HOME: options.home,
     PAPERCLIP_INSTANCE_ID: "gettercontrol",
     PAPERCLIP_CONFIG: paths.config,

@@ -13,6 +13,12 @@ export const currentSkillActor = () => actors.getStore();
 export function withSkillActor<T>(actor: AuthorizationActor, operation: () => T): T {
   return actors.run(actor, operation);
 }
+/** Internal public-catalog bootstrap runs as system setup, not as the request
+ * actor whose company creation happened to trigger it. Never use for private
+ * skill sources or ordinary authenticated skill operations. */
+export function withoutSkillActor<T>(operation: () => T): T {
+  return actors.exit(operation);
+}
 export const skillAccessRequestContext: RequestHandler = (req, _res, next) => withSkillActor(req.actor, next);
 
 export function skillAccessService(db: Db, actor = currentSkillActor()) {

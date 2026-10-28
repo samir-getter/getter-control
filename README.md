@@ -33,6 +33,7 @@ Windows x64 can run the source control plane using the TypeScript preparation co
 ## Development and provenance
 
 - [Getter Control guide](doc/GETTER-CONTROL.md): paths, startup, verification and platform limits.
+- [Global skills and company synchronization](doc/GETTER-CONTROL-SKILLS.md): Hallmark, pinned packages, default installation and agent selection.
 - [Original Paperclip README](README.paperclip.md): upstream capabilities and documentation. Its Paperclip installation commands refer to upstream, not to this fork.
 - Existing `AGENTS.md`, `rules/`, `DESIGN.md` and architecture documents remain applicable.
 - The upstream workflows are retained in `.github/upstream-workflows/`; Getter CI uses GitHub hosted runners and does not publish upstream packages or containers.

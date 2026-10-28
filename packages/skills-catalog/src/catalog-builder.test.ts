@@ -60,6 +60,40 @@ describe("skills catalog manifest", () => {
     expect(result.manifest.skills[0]!.contentHash).toMatch(/^sha256:[a-f0-9]{64}$/);
   });
 
+  it("classifies reference previews as assets while preserving script-directory trust", async () => {
+    const packageDir = await createCatalogPackage();
+    await writeSkill(packageDir, "bundled", "design", "preview-design", {
+      frontmatter: [
+        "name: Preview Design",
+        "description: Use local reference images when designing a page.",
+      ],
+      files: {
+        "references/layout.md": "# Layout\n",
+        "references/theme.JPG": "preview",
+        "references/diagram.png": "preview",
+        "scripts/check.js": "console.log('check');\n",
+        "scripts/preview.png": "preview",
+      },
+    });
+    const skillDir = path.join(packageDir, "catalog", "bundled", "design", "preview-design");
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xd9]);
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    await fs.writeFile(path.join(skillDir, "references", "theme.JPG"), jpeg);
+    await fs.writeFile(path.join(skillDir, "references", "diagram.png"), png);
+
+    const result = await buildCatalogManifest({ packageDir });
+
+    expect(result.errors).toEqual([]);
+    expect(result.manifest.skills[0]?.trustLevel).toBe("scripts_executables");
+    expect(result.manifest.skills[0]?.files).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: "references/layout.md", kind: "reference" }),
+      expect.objectContaining({ path: "references/theme.JPG", kind: "asset", sizeBytes: jpeg.length }),
+      expect.objectContaining({ path: "references/diagram.png", kind: "asset", sizeBytes: png.length }),
+      expect.objectContaining({ path: "scripts/check.js", kind: "script" }),
+      expect.objectContaining({ path: "scripts/preview.png", kind: "script" }),
+    ]));
+  });
+
   it("builds stable manifest entries from pinned GitHub references", async () => {
     const packageDir = await createCatalogPackage();
     const skillMarkdown = [

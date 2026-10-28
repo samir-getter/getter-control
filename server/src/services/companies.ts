@@ -31,6 +31,7 @@ import {
 import { environmentService } from "./environments.js";
 import { logActivity, type ActivityPublication } from "./activity-log.js";
 import { builtInAgentService } from "./built-in-agents.js";
+import { logger } from "../middleware/logger.js";
 
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -285,6 +286,14 @@ export function companyService(db: Db, _budgetHooks: BudgetServiceHooks = {}) {
       const created = await createCompanyWithUniquePrefix(data);
       await environmentsSvc.ensureLocalEnvironment(created.id);
       await builtInAgents.autoProvisionBundledAgents(created.id);
+      if (process.env.GETTER_CONTROL_DEFAULT_SKILLS === "1") {
+        try {
+          const { companyCatalogDefaultsService } = await import("./company-catalog-defaults.js");
+          await companyCatalogDefaultsService(db).syncCompany(created.id);
+        } catch (err) {
+          logger.warn({ err, companyId: created.id }, "new company catalog defaults deferred until next startup");
+        }
+      }
       const row = await getCompanyQuery(db)
         .where(eq(companies.id, created.id))
         .then((rows) => rows[0] ?? null);

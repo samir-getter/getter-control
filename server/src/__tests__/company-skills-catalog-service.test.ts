@@ -82,6 +82,7 @@ describeEmbeddedPostgres("companySkillService.installFromCatalog", () => {
   let svc!: Awaited<ReturnType<typeof createService>>;
   let tempDb: Awaited<ReturnType<typeof startEmbeddedPostgresTestDatabase>> | null = null;
   let oldPaperclipHome: string | undefined;
+  let oldGetterControlHome: string | undefined;
   const cleanupDirs = new Set<string>();
 
   async function createService() {
@@ -102,15 +103,17 @@ describeEmbeddedPostgres("companySkillService.installFromCatalog", () => {
 
   beforeAll(async () => {
     oldPaperclipHome = process.env.PAPERCLIP_HOME;
+    oldGetterControlHome = process.env.GETTER_CONTROL_HOME;
     tempDb = await startEmbeddedPostgresTestDatabase("paperclip-company-skills-catalog-");
     db = createDb(tempDb.connectionString);
     svc = await createService();
-  }, 20_000);
+  }, 90_000);
 
   beforeEach(async () => {
     const home = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-catalog-home-"));
     cleanupDirs.add(home);
     process.env.PAPERCLIP_HOME = home;
+    process.env.GETTER_CONTROL_HOME = home;
     mockCatalogService.getCatalogSkillOrThrow.mockReturnValue(sampleCatalogSkill);
     mockCatalogService.resolveCatalogSkillReference.mockReturnValue({
       skill: sampleCatalogSkill,
@@ -142,6 +145,8 @@ describeEmbeddedPostgres("companySkillService.installFromCatalog", () => {
   afterAll(async () => {
     if (oldPaperclipHome === undefined) delete process.env.PAPERCLIP_HOME;
     else process.env.PAPERCLIP_HOME = oldPaperclipHome;
+    if (oldGetterControlHome === undefined) delete process.env.GETTER_CONTROL_HOME;
+    else process.env.GETTER_CONTROL_HOME = oldGetterControlHome;
     await tempDb?.cleanup();
   });
 
@@ -458,6 +463,26 @@ describeEmbeddedPostgres("companySkillService.installFromCatalog", () => {
         }),
       }),
     });
+    const persisted = await db.select().from(companySkills).where(eq(companySkills.id, installed.skill.id))
+      .then(rows => rows[0]);
+    expect(persisted?.metadata).toMatchObject({ auditVerdict: "fail", updateHoldReason: "audit_hard_stop",
+      userModifiedAt: expect.any(String), auditCodes: expect.arrayContaining(["missing_skill_md"]) });
+  });
+
+  it("persists local modification audit evidence before rejecting a catalog reinstall", async () => {
+    const companyId = await createCompany();
+    const installed = await svc.installFromCatalog(companyId, { catalogSkillId: sampleCatalogSkill.id });
+    const skillPath = path.join(installed.skill.sourceLocator!, "SKILL.md");
+    const changed = `${sampleSkillMarkdown}\nCompany edit\n`;
+    await fs.writeFile(skillPath, changed);
+    await expect(svc.installFromCatalog(companyId, { catalogSkillId: sampleCatalogSkill.id })).rejects.toMatchObject({
+      status: 422, details: expect.objectContaining({ updateHoldReason: "local_modifications" }),
+    });
+    const persisted = await db.select().from(companySkills).where(eq(companySkills.id, installed.skill.id))
+      .then(rows => rows[0]);
+    expect(persisted?.metadata).toMatchObject({ auditVerdict: "warning", updateHoldReason: "local_modifications",
+      userModifiedAt: expect.any(String), auditCodes: expect.arrayContaining(["local_modifications"]) });
+    await expect(fs.readFile(skillPath, "utf8")).resolves.toBe(changed);
   });
 
   it("resets a modified catalog skill back to the pinned origin when forced", async () => {

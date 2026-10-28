@@ -731,6 +731,9 @@ export function classifyInventoryKind(relativePath: string): CompanySkillFileInv
     return "script";
   }
   if (normalized.startsWith("scripts/")) return "script";
+  // Theme previews can live beside Markdown references. Their binary bytes
+  // remain assets while script extensions/directories keep precedence.
+  if (/\.(?:avif|bmp|gif|ico|jpe?g|png|webp)$/i.test(fileName)) return "asset";
   if (normalized.startsWith("references/")) return "reference";
   if (normalized.startsWith("assets/")) return "asset";
   if (normalized.endsWith(".md")) return "markdown";
@@ -2964,7 +2967,23 @@ async function listLastEditorsBySkillId(
   return editors;
 }
 
+class ExistingCatalogInstallAuditRejection extends Error {
+  constructor(readonly rejection: ReturnType<typeof unprocessable>) {
+    super(rejection.message);
+  }
+}
+
+export async function lockCompanyCatalogSkillInstall(transaction: DbOrTransaction, companyId: string) {
+  // Catalog packages have separate paths, but preparing their operational
+  // inventory writes shared company rows. Keep the full preparation ordered.
+  await transaction.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`company-catalog-install:${companyId}`}, 0))`);
+}
+
 export function companySkillService(db: Db, options: { actor?: AuthorizationActor } = {}) {
+  return createCompanySkillService(db, options, false);
+}
+
+function createCompanySkillService(db: Db, options: { actor?: AuthorizationActor }, catalogInstallTransaction: boolean) {
   const visibility = (database: DbOrTransaction = db) => skillAccessService(database as Db, options.actor);
   const folderSvc = folderService(db);
   const agents = agentService(db);
@@ -5765,6 +5784,23 @@ export function companySkillService(db: Db, options: { actor?: AuthorizationActo
     companyId: string,
     input: CompanySkillInstallCatalogRequest,
   ): Promise<CompanySkillInstallCatalogResult> {
+    if (!catalogInstallTransaction) {
+      getCatalogSkillOrThrow(input.catalogSkillId);
+      const result = await db.transaction(async transaction => {
+        await lockCompanyCatalogSkillInstall(transaction, companyId);
+        try {
+          return await createCompanySkillService(transaction as unknown as Db, options, true).installFromCatalog(companyId, input);
+        } catch (error) {
+          // An audit rejection of an existing copy is durable evidence, not a
+          // failed candidate install. Commit its hold metadata before returning
+          // the original public error. All other failures still roll back.
+          if (error instanceof ExistingCatalogInstallAuditRejection) return error;
+          throw error;
+        }
+      });
+      if (result instanceof ExistingCatalogInstallAuditRejection) throw result.rejection;
+      return result;
+    }
     await ensureSkillInventoryCurrent(companyId);
     const catalogSkill = getCatalogSkillOrThrow(input.catalogSkillId);
     assertCatalogSkillInstallable(catalogSkill);
@@ -5774,7 +5810,7 @@ export function companySkillService(db: Db, options: { actor?: AuthorizationActo
       throw unprocessable("Catalog skill slug is invalid.");
     }
 
-    const existingSkills = await listFull(companyId);
+    const existingSkills = await readFullSkillRows(companyId);
     const existingByKey = existingSkills.find((skill) => skill.key === catalogSkill.key) ?? null;
     const slugConflict = existingSkills.find((skill) => skill.slug === slug && skill.id !== existingByKey?.id) ?? null;
     if (slugConflict) {
@@ -5811,10 +5847,10 @@ export function companySkillService(db: Db, options: { actor?: AuthorizationActo
           const message = audit.verdict === "fail"
             ? "Catalog skill has hard-stop audit findings; rerun with --force to replace it."
             : "Catalog skill has local modifications; rerun with --force to replace it.";
-          throw unprocessable(message, {
+          throw new ExistingCatalogInstallAuditRejection(unprocessable(message, {
             updateHoldReason: holdReason,
             audit,
-          });
+          }));
         }
       }
     }
