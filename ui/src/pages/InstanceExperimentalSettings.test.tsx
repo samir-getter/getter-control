@@ -83,6 +83,7 @@ function defaultExperimentalSettings(): InstanceExperimentalSettingsPayload {
     enableIsolatedWorkspacesByDefault: false,
     enableStreamlinedLeftNavigation: true,
     enableStreamlinedUi: true,
+    enableCalmUi: false,
     enableApps: true,
     enableMcpAggregators: true,
     enablePublicMcp: false,
@@ -346,6 +347,22 @@ describe("InstanceExperimentalSettings — Conference Room Chat card (PAP-11233)
     const toggle = container.querySelector(CONFERENCE_TOGGLE_SELECTOR);
     expect(toggle).toBeNull();
     expect(mockInstanceSettingsApi.updateExperimental).not.toHaveBeenCalled();
+  });
+
+  it("keeps CALM off by default and updates the shared settings cache on opt-in and rollback", async () => {
+    await renderPage();
+    const toggle = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Toggle CALM UI experimental setting"]',
+    );
+    expect(toggle?.getAttribute("aria-checked")).toBe("false");
+    await act(() => toggle?.click());
+    await flushReact();
+    expect(mockInstanceSettingsApi.updateExperimental).toHaveBeenLastCalledWith({ enableCalmUi: true });
+    expect(toggle?.getAttribute("aria-checked")).toBe("true");
+    await act(() => toggle?.click());
+    await flushReact();
+    expect(mockInstanceSettingsApi.updateExperimental).toHaveBeenLastCalledWith({ enableCalmUi: false });
+    expect(toggle?.getAttribute("aria-checked")).toBe("false");
   });
 
   it("renders and patches the Streamlined UI experimental toggle on and off", async () => {

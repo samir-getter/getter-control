@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Sidebar } from "./Sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { queryKeys } from "../lib/queryKeys";
 
 const mockHeartbeatsApi = vi.hoisted(() => ({
   liveRunsForCompany: vi.fn(),
@@ -21,6 +22,9 @@ const mockInstanceSettingsApi = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/router", () => ({
+  Link: ({ to, children, state: _state, ...props }: { to: string; children: ReactNode; state?: unknown }) => <a href={to} {...props}>{children}</a>,
+  useLocation: () => ({ pathname: "/PAP/dashboard", search: "", hash: "" }),
+  useParams: () => ({ companyPrefix: "PAP" }),
   NavLink: ({ to, children, className, ...props }: {
     to: string;
     children: ReactNode;
@@ -85,9 +89,13 @@ vi.mock("../hooks/useInboxBadge", () => ({
 }));
 
 vi.mock("@/plugins/slots", () => ({
-  PluginSlotOutlet: ({ slotTypes }: { slotTypes: string[] }) => (
-    <div data-plugin-slot-types={slotTypes.join(",")}>Plugin slot outlet</div>
-  ),
+  PluginSlotOutlet: ({ slotTypes }: { slotTypes: string[] }) => {
+    const [edits, setEdits] = useState(0);
+    return <div data-plugin-slot-types={slotTypes.join(",")}>Plugin slot outlet
+      {slotTypes.includes("sidebarPanel") ? <><textarea aria-label="Panel draft" defaultValue="" />
+        <button onClick={() => setEdits((value) => value + 1)}>Panel edits {edits}</button></> : null}
+    </div>;
+  },
 }));
 
 vi.mock("@/plugins/launchers", () => ({
@@ -101,11 +109,13 @@ vi.mock("./SidebarCompanyMenu", () => ({
 }));
 
 vi.mock("./SidebarAgents", () => ({
-  SidebarAgents: ({ streamlined }: { streamlined?: boolean }) => (
-    <div data-testid="sidebar-agents" data-streamlined={String(streamlined)}>
-      Active agents
-    </div>
-  ),
+  SidebarAgents: ({ streamlined }: { streamlined?: boolean }) => {
+    const [edits, setEdits] = useState(0);
+    return <div data-testid="sidebar-agents" data-streamlined={String(streamlined)}>
+      Active agents<textarea aria-label="Agent draft" defaultValue="" />
+      <button onClick={() => setEdits((value) => value + 1)}>Agent edits {edits}</button>
+    </div>;
+  },
 }));
 
 vi.mock("./SidebarProjects", () => ({
@@ -134,9 +144,9 @@ async function flushReact() {
 describe("Sidebar", () => {
   let container: HTMLDivElement;
 
-  async function renderSidebar() {
+  async function renderSidebar(options: { client?: QueryClient; children?: ReactNode } = {}) {
     const root = createRoot(container);
-    const queryClient = new QueryClient({
+    const queryClient = options.client ?? new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
 
@@ -144,7 +154,7 @@ describe("Sidebar", () => {
       root.render(
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
-            <Sidebar />
+            <Sidebar>{options.children}</Sidebar>
           </TooltipProvider>
         </QueryClientProvider>,
       );
@@ -171,6 +181,81 @@ describe("Sidebar", () => {
     container.remove();
     document.body.innerHTML = "";
     vi.clearAllMocks();
+  });
+
+  it.each([
+    [false, "custom"], [true, "custom"], [false, "agents"], [true, "agents"],
+  ] as const)("preserves all sidebar supplements across flag %s rollback with %s content", async (initialCalm, source) => {
+    function CustomPanel() {
+      const [edits, setEdits] = useState(0);
+      return <div><textarea aria-label="Custom draft" defaultValue="" />
+        <button onClick={() => setEdits((value) => value + 1)}>Custom edits {edits}</button></div>;
+    }
+    const settings = { enableStreamlinedUi: true, enableCalmUi: initialCalm };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    client.setQueryData(queryKeys.instance.experimentalSettings, settings);
+    mockInstanceSettingsApi.getExperimental.mockResolvedValue(settings);
+    const root = await renderSidebar({ client, children: source === "custom" ? <CustomPanel /> : undefined });
+    const pointerEvents = document.body.style.pointerEvents;
+    const draftLabel = source === "custom" ? "Custom draft" : "Agent draft";
+    const editLabel = source === "custom" ? "Custom" : "Agent";
+    const draft = document.querySelector<HTMLTextAreaElement>(`textarea[aria-label='${draftLabel}']`)!;
+    const panelDraft = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Panel draft"]')!;
+    const markers = ["sidebar-starred-projects", "sidebar-recent-tasks"].map((id) => document.querySelector(`[data-testid='${id}']`));
+    const launcher = document.querySelector('[data-plugin-launcher-zone="sidebar"]');
+
+    async function openMore() {
+      flushSync(() => { container.querySelector<HTMLButtonElement>(".calm-more-trigger")!.click(); });
+      await flushReact();
+      expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+      expect(draft.closest('[inert]')).toBeNull();
+    }
+    async function setFlag(enabled: boolean) {
+      flushSync(() => { client.setQueryData(queryKeys.instance.experimentalSettings, { ...settings, enableCalmUi: enabled }); });
+      await flushReact();
+      expect(document.querySelector(`textarea[aria-label='${draftLabel}']`)).toBe(draft);
+      expect(document.querySelectorAll(`textarea[aria-label='${draftLabel}']`)).toHaveLength(1);
+      expect(document.querySelector('textarea[aria-label="Panel draft"]')).toBe(panelDraft);
+      expect(draft.value).toBe("Unsent sidebar notes");
+      expect(panelDraft.value).toBe("Unsent plugin panel notes");
+      expect(document.body.textContent).toContain(`${editLabel} edits 1`);
+      expect(document.body.textContent).toContain("Panel edits 1");
+      for (const [index, id] of ["sidebar-starred-projects", "sidebar-recent-tasks"].entries())
+        expect(document.querySelector(`[data-testid='${id}']`)).toBe(markers[index]);
+      expect(document.querySelector('[data-plugin-launcher-zone="sidebar"]')).toBe(launcher);
+      if (!enabled) {
+        expect(document.querySelector('[role="dialog"]')).toBeNull();
+        expect(document.body.style.pointerEvents).toBe(pointerEvents);
+        expect(draft.closest('[hidden], [inert]')).toBeNull();
+        expect(draft.closest("nav")).not.toBeNull();
+      }
+    }
+    async function closeAndReopenMore() {
+      const trigger = container.querySelector<HTMLButtonElement>(".calm-more-trigger")!;
+      flushSync(() => { document.querySelector<HTMLButtonElement>('[role="dialog"] [data-slot="dialog-close"]')!.click(); });
+      await flushReact();
+      expect(document.querySelector('[role="dialog"]')).toBeNull();
+      expect(document.body.style.pointerEvents).toBe(pointerEvents);
+      expect(document.activeElement).toBe(trigger);
+      expect(draft.closest('[inert]')).not.toBeNull();
+      expect(draft.value).toBe("Unsent sidebar notes");
+      await openMore();
+      expect(document.querySelector(`textarea[aria-label='${draftLabel}']`)).toBe(draft);
+    }
+    if (initialCalm) await openMore();
+    draft.value = "Unsent sidebar notes";
+    panelDraft.value = "Unsent plugin panel notes";
+    flushSync(() => {
+      for (const label of [`${editLabel} edits 0`, "Panel edits 0"])
+        Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === label)!.click();
+    });
+    await setFlag(!initialCalm);
+    if (!initialCalm) { await openMore(); await closeAndReopenMore(); }
+    await setFlag(initialCalm);
+    if (initialCalm) { await openMore(); await closeAndReopenMore(); }
+    await setFlag(false);
+    flushSync(() => { root.unmount(); });
+    client.clear();
   });
 
   it("keeps the default sidebar edge borderless", async () => {
@@ -342,7 +427,9 @@ describe("Sidebar", () => {
     const sidebarSlot = [...container.querySelectorAll("nav [data-plugin-slot-types]")]
       .find((node) => node.getAttribute("data-plugin-slot-types") === "sidebar");
     expect(sidebarSlot?.textContent).toContain("Plugin slot outlet");
-    const workSectionContainer = sidebarSlot?.parentElement?.parentElement;
+    const workSectionContainer = [...container.querySelectorAll('[data-slot="collapsible"]')]
+      .find((section) => section.querySelector('[data-slot="sidebar-group-label"]')?.textContent === "Work");
+    expect(workSectionContainer?.contains(sidebarSlot ?? null)).toBe(true);
     const workText = workSectionContainer?.textContent ?? "";
     expect(workText).toContain("Work");
     expect(workText).toContain("Workspaces");

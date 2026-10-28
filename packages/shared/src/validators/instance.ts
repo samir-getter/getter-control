@@ -47,6 +47,7 @@ export const instanceExperimentalSettingsSchema = z.object({
   enableIsolatedWorkspacesByDefault: z.boolean().default(false),
   enableStreamlinedLeftNavigation: z.boolean().default(true),
   enableStreamlinedUi: z.boolean().default(true),
+  enableCalmUi: z.boolean().default(false),
   // Deprecated compatibility key. Apps is a standard product surface and is
   // always enabled; this remains accepted so older stored rows and managed
   // configs continue to load during upgrades.

@@ -4918,3 +4918,156 @@ html:has(.design-proposal-theme) [data-canonical-toolbar] .collection-toolbar-ta
     transform: rotate(calc(var(--artifact-base, 0deg) - 5deg));
   }
 }
+
+body:has(.app-shell.calm-shell) {
+  --calm-rail-width: 80px;
+  --calm-rail-row: 62px;
+  --calm-dock-height: 64px;
+  --calm-label-size: 11px;
+  --calm-area-gap: 16px;
+  --calm-dialog-width: 760px;
+  --calm-dialog-height: 82dvh;
+  --calm-header-height: 60px;
+  --calm-control-motion: 120ms;
+  --calm-press-scale: 0.97;
+  --calm-brand-size: 28px;
+}
+html:not(.dark) body:has(.app-shell.calm-shell) {
+  --background: #fbfcfb;
+  --foreground: #19332a;
+  --card: #fbfcfb;
+  --card-foreground: #19332a;
+  --popover: #fbfcfb;
+  --popover-foreground: #19332a;
+  --primary: #234e3e;
+  --primary-foreground: #ffffff;
+  --muted: #f1f4f1;
+  --muted-highlight: #e4ece4;
+  --muted-foreground: #626e66;
+  --accent: #edf5ee;
+  --accent-foreground: #19332a;
+  --border: #e2e8e2;
+  --input: #e2e8e2;
+  --ring: #234e3e;
+  --sidebar: #f1f4f1;
+  --sidebar-foreground: #19332a;
+  --sidebar-accent: #e4ece4;
+  --sidebar-accent-foreground: #19332a;
+  --sidebar-border: #e2e8e2;
+}
+html.dark body:has(.app-shell.calm-shell) {
+  --background: #17231d;
+  --foreground: #e6eee7;
+  --card: #17231d;
+  --card-foreground: #e6eee7;
+  --popover: #1d2c24;
+  --popover-foreground: #e6eee7;
+  --primary: #b7d8bf;
+  --primary-foreground: #17231d;
+  --muted: #1d2c24;
+  --muted-highlight: #2c3d32;
+  --muted-foreground: #a5b6ab;
+  --accent: #2c3d32;
+  --accent-foreground: #e6eee7;
+  --border: #34453a;
+  --input: #34453a;
+  --ring: #b7d8bf;
+  --sidebar: #1d2c24;
+  --sidebar-foreground: #e6eee7;
+  --sidebar-accent: #2c3d32;
+  --sidebar-accent-foreground: #e6eee7;
+  --sidebar-border: #34453a;
+}
+body:has(.app-shell.calm-shell) .calm-area-rail {
+  display: flex; flex: 1; min-height: 0; flex-direction: column;
+  gap: var(--spacing); padding: var(--spacing); overflow-y: auto; overscroll-behavior: contain;
+}
+body:has(.app-shell.calm-shell) :is(.calm-area-link, .calm-rail-action, .calm-more-trigger, .calm-mobile-link) {
+  display: flex; min-width: 0; flex: none; flex-direction: column;
+  align-items: center; justify-content: center; gap: var(--spacing);
+  min-height: var(--calm-rail-row); height: auto; padding: var(--spacing);
+  color: var(--muted-foreground); border-radius: var(--radius-lg);
+  font-family: var(--font-sans); font-size: var(--calm-label-size); font-weight: var(--font-weight-medium);
+  line-height: var(--text-sm--line-height); text-align: center;
+}
+body:has(.app-shell.calm-shell) :is(.calm-area-link, .calm-rail-action, .calm-more-trigger, .calm-mobile-link) > svg,
+body:has(.app-shell.calm-shell) .calm-area-icon > svg {
+  width: var(--sz-18px); height: var(--sz-18px);
+}
+body:has(.app-shell.calm-shell) .calm-area-icon { position: relative; }
+body:has(.app-shell.calm-shell) .calm-area-badge {
+  position: absolute; top: calc(var(--spacing) * -2); right: calc(var(--spacing) * -3);
+  min-width: var(--sz-18px); padding: 0 var(--spacing);
+  font-size: var(--calm-label-size); line-height: var(--text-sm--line-height);
+}
+body:has(.app-shell.calm-shell) :is(.calm-area-link[data-active], .calm-mobile-link[aria-current], .calm-area-tab[aria-current]) {
+  background: var(--accent); color: var(--primary);
+}
+body:has(.app-shell.calm-shell) :is(.calm-area-link, .calm-rail-action, .calm-more-trigger, .calm-mobile-link, .calm-area-tab, .calm-more-link):hover {
+  background: var(--muted-highlight); color: var(--foreground);
+}
+body:has(.app-shell.calm-shell) :is(.calm-area-link, .calm-rail-action, .calm-more-trigger, .calm-mobile-link, .calm-area-tab, .calm-more-link):focus-visible {
+  outline: var(--focus-ring-stroke-width) solid var(--ring); outline-offset: var(--focus-ring-stroke-width);
+}
+body:has(.app-shell.calm-shell) .calm-area-topbar {
+  display: flex; flex: none; align-items: center; gap: var(--calm-area-gap);
+  min-height: var(--calm-header-height); padding: 0 var(--calm-area-gap);
+  border-bottom: var(--focus-ring-stroke-width) solid var(--border); background: var(--background);
+}
+body:has(.app-shell.calm-shell) .calm-brand-mark { width: var(--calm-brand-size); height: var(--calm-brand-size); flex: none; }
+body:has(.app-shell.calm-shell) .calm-area-label { font-size: var(--text-sm); font-weight: var(--font-weight-semibold); }
+body:has(.app-shell.calm-shell) .calm-area-tabs { display: flex; flex: 1; min-width: 0; overflow-x: auto; gap: var(--spacing); }
+body:has(.app-shell.calm-shell) .calm-area-tab {
+  display: inline-flex; flex: none; align-items: center; justify-content: center; min-height: var(--sz-44px);
+  padding: 0 calc(var(--spacing) * 3); border-radius: var(--radius-lg);
+  font-size: var(--text-sm); white-space: nowrap; color: var(--muted-foreground);
+}
+body:has(.app-shell.calm-shell) .calm-topbar-more { min-width: var(--sz-44px); min-height: var(--sz-44px); }
+body:has(.app-shell.calm-shell) .calm-mobile-items {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-height: var(--calm-dock-height); padding: 0 var(--spacing); background: var(--muted);
+}
+body:has(.app-shell.calm-shell) .calm-mobile-link { min-height: var(--calm-dock-height); }
+body:has(.app-shell.calm-shell) .calm-more-dialog {
+  width: calc(100vw - var(--calm-area-gap) * 2); max-width: var(--calm-dialog-width);
+  max-height: var(--calm-dialog-height); overflow-y: auto; overscroll-behavior: contain;
+}
+body:has(.app-shell.calm-shell) .calm-more-content { display: grid; gap: var(--calm-area-gap); }
+body:has(.app-shell.calm-shell) :is(.calm-more-group, .calm-more-shortcuts) h3 {
+  display: flex; align-items: center; gap: calc(var(--spacing) * 2);
+  margin-bottom: var(--spacing); font-size: var(--text-sm); font-weight: var(--font-weight-semibold);
+}
+body:has(.app-shell.calm-shell) .calm-more-group h3 svg { width: var(--sz-18px); height: var(--sz-18px); color: var(--muted-foreground); }
+body:has(.app-shell.calm-shell) .calm-more-group > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--spacing); }
+body:has(.app-shell.calm-shell) .calm-more-link {
+  display: flex; align-items: center; min-height: var(--sz-44px); padding: 0 calc(var(--spacing) * 3);
+  border-radius: var(--radius-lg); background: var(--muted); font-size: var(--text-sm);
+}
+body:has(.app-shell.calm-shell) .calm-more-dialog [data-slot="dialog-close"] { min-height: var(--sz-44px); min-width: var(--sz-44px); }
+body:has(.app-shell.calm-shell) .calm-more-shortcuts :is(button, a, [role="button"], [role="menuitem"]) { min-height: var(--sz-44px); min-width: var(--sz-44px); }
+@media (min-width: 768px) {
+  body:has(.app-shell.calm-shell) :is(.calm-primary-shell, .calm-primary-shell > .sidebar-shell-panel) { width: var(--calm-rail-width) !important; }
+  body:has(.app-shell.calm-shell) .calm-company-switcher { padding: 0 var(--spacing); }
+  body:has(.app-shell.calm-shell) .calm-company-switcher button { min-height: var(--sz-44px); padding: var(--spacing); justify-content: center; }
+  body:has(.app-shell.calm-shell) .calm-company-switcher button > span { justify-content: center; }
+  body:has(.app-shell.calm-shell) .calm-company-switcher button > span > :last-child { display: none; }
+  body:has(.app-shell.calm-shell) .calm-primary-shell [aria-label="Open account menu"] { min-width: var(--sz-44px); min-height: var(--sz-44px); flex: none; justify-content: center; padding: var(--spacing); }
+  body:has(.app-shell.calm-shell) .calm-primary-shell [aria-label="Open account menu"] > :last-child { display: none; }
+  body:has(.app-shell.calm-shell) .calm-primary-shell .sidebar-shell-panel > :last-child { padding: var(--spacing); }
+  body:has(.app-shell.calm-shell) .calm-primary-shell .sidebar-shell-panel > :last-child > div { justify-content: center; flex-wrap: wrap; padding: 0; }
+}
+@media (max-width: 767px) {
+  body:has(.app-shell.calm-shell) .calm-area-topbar { gap: calc(var(--spacing) * 2); padding: 0 calc(var(--spacing) * 2); }
+  body:has(.app-shell.calm-shell) .calm-area-label { display: none; }
+  body:has(.app-shell.calm-shell) .calm-area-tab { padding: 0 calc(var(--spacing) * 2); }
+  body:has(.app-shell.calm-shell) .calm-more-group > div { grid-template-columns: 1fr; }
+  body:has(.app-shell.calm-shell) .calm-more-dialog { padding-bottom: calc(var(--calm-area-gap) + var(--sz-safe-bottom)); }
+  body:has(.app-shell.calm-shell) .calm-area-rail :is(.calm-area-link, .calm-rail-action, .calm-more-trigger) { flex-direction: row; justify-content: flex-start; min-height: var(--sz-44px); padding: 0 var(--calm-area-gap); gap: var(--calm-area-gap); font-size: var(--text-sm); }
+  body:has(.app-shell.calm-shell) :is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-checkbox-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-sub-trigger"]) { min-height: var(--sz-44px); min-width: var(--sz-44px); }
+  body:has(.app-shell.calm-shell) :is([data-slot="command-item"], [data-slot="dialog-close"]) { min-height: var(--sz-44px); min-width: var(--sz-44px); }
+  body:has(.app-shell.calm-shell) .app-shell :is(input, select, textarea) { font-size: var(--text-base); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  body:has(.app-shell.calm-shell) :is(.calm-rail-action, .calm-mobile-link, .calm-more-trigger) { transition: transform var(--calm-control-motion) ease-out; }
+  body:has(.app-shell.calm-shell) :is(.calm-rail-action, .calm-mobile-link, .calm-more-trigger):active { transform: scale(var(--calm-press-scale)); }
+}

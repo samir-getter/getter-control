@@ -212,6 +212,7 @@ export function InstanceExperimentalSettings() {
   // Streamlined left navigation is now the standard sidebar (PAP-12472); the
   // experimental opt-out was retired, so it no longer surfaces a toggle here.
   const enableStreamlinedUi = experimentalQuery.data?.enableStreamlinedUi !== false;
+  const enableCalmUi = experimentalQuery.data?.enableCalmUi === true;
   const enableConferenceRoomChat = experimentalQuery.data?.enableConferenceRoomChat === true;
   const enableClassicTaskInterface = experimentalQuery.data?.enableClassicTaskInterface === true;
   const enableIssuePlanDecompositions =
@@ -350,6 +351,18 @@ export function InstanceExperimentalSettings() {
           settingKey="enableBuiltInAgents"
           managed={managedKeys.enableBuiltInAgents}
           ariaLabel="Toggle built-in agents experimental setting"
+        />
+
+        <ExperimentalToggleCard
+          title="CALM UI"
+          description="Use area navigation, contextual tabs, and a focused mobile dock. Requires Streamlined UI."
+          footnote="Off by default. Turn it off to restore the current shell without changing page data."
+          checked={enableCalmUi}
+          onCheckedChange={(checked) => toggleMutation.mutate({ enableCalmUi: checked })}
+          disabled={toggleMutation.isPending}
+          settingKey="enableCalmUi"
+          managed={managedKeys.enableCalmUi}
+          ariaLabel="Toggle CALM UI experimental setting"
         />
 
         <ExperimentalToggleCard

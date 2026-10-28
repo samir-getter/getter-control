@@ -38,6 +38,8 @@ import { useCompany } from "../context/CompanyContext";
 import { useSidebar } from "../context/SidebarContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useStreamlinedUiEnabled } from "../hooks/useStreamlinedUiEnabled";
+import { useCalmUiEnabled } from "../hooks/useCalmUiEnabled";
+import { CalmAreaTabs, usePersistentNavigationRegion } from "./calm/CalmNavigation";
 import { useCompanyPageMemory } from "../hooks/useCompanyPageMemory";
 import { useMobileNavVisibility } from "../hooks/useMobileNavVisibility";
 import { useMobileVisualViewport } from "../hooks/useMobileVisualViewport";
@@ -120,6 +122,8 @@ export function Layout({ sidebarSections }: { sidebarSections?: ReactNode }) {
   const location = useLocation();
   const navigationType = useNavigationType();
   const { enabled: streamlinedUiEnabled } = useStreamlinedUiEnabled();
+  const { enabled: calmUiEnabled } = useCalmUiEnabled();
+  const calmEnabled = calmUiEnabled && streamlinedUiEnabled && !designSandbox;
   const shellRoute = classifyShellRoute(location.pathname, companyPrefix);
   const isCompanySettingsRoute = shellRoute.builtInContextualSurface === "settings";
   const companyPathSegments = shellRoute.companySegments;
@@ -218,7 +222,7 @@ export function Layout({ sidebarSections }: { sidebarSections?: ReactNode }) {
   ) : sharedSecondarySidebar;
   const hasSecondarySidebar = secondarySidebar != null;
   const keepsPrimarySidebar = streamlinedUiEnabled && hasSecondarySidebar && (
-    isAgentChatRoute
+    calmEnabled || isAgentChatRoute
     || shellRoute.builtInContextualSurface === "agent"
     || shellRoute.builtInContextualSurface === "routine"
     || isAppsRoute
@@ -226,6 +230,13 @@ export function Layout({ sidebarSections }: { sidebarSections?: ReactNode }) {
   );
   const replacesPrimarySidebar = streamlinedUiEnabled && hasSecondarySidebar && !keepsPrimarySidebar;
   const showsAdjacentSecondarySidebar = hasSecondarySidebar && (!streamlinedUiEnabled || keepsPrimarySidebar);
+  const primarySidebarRegion = usePersistentNavigationRegion("layout-primary-sidebar");
+  const secondarySidebarRegion = usePersistentNavigationRegion("layout-secondary-sidebar");
+  const showsPrimarySidebar = !designSandbox && (isMobile ? !hasSecondarySidebar : !replacesPrimarySidebar);
+  const [hasActivatedCalmSidebar, setHasActivatedCalmSidebar] = useState(calmEnabled && showsPrimarySidebar);
+  useLayoutEffect(() => {
+    if (calmEnabled && showsPrimarySidebar && !hasActivatedCalmSidebar) setHasActivatedCalmSidebar(true);
+  }, [calmEnabled, hasActivatedCalmSidebar, showsPrimarySidebar]);
   const contextualSurface: ContextualSidebarSurface | null = !streamlinedUiEnabled || !hasSecondarySidebar
     ? null
     : routeSidebarSlot && !shellRoute.builtInContextualSurface
@@ -579,7 +590,8 @@ export function Layout({ sidebarSections }: { sidebarSections?: ReactNode }) {
       ref={mobileViewportRef}
       data-mobile={isMobile ? "true" : undefined}
       className={cn(
-        "paperclip-app-shell bg-background text-foreground pt-(--sz-safe-top)",
+        "paperclip-app-shell app-shell bg-background text-foreground pt-(--sz-safe-top)",
+        calmEnabled && "calm-shell",
         // overflow-x-clip on mobile keeps a stray wide descendant from making the
         // whole viewport scroll horizontally. clip (not hidden) leaves overflow-y
         // computed as visible, so native body scroll + the sticky breadcrumb keep
@@ -615,9 +627,9 @@ export function Layout({ sidebarSections }: { sidebarSections?: ReactNode }) {
             <div className="flex flex-1 min-h-0 overflow-hidden">
               <div className="w-60 shrink-0 overflow-hidden">
                 {hasSecondarySidebar ? (
-                  <SecondarySidebar>{secondarySidebar}</SecondarySidebar>
+                  secondarySidebarRegion.contentHost
                 ) : (
-                  <Sidebar>{sidebarSections}</Sidebar>
+                  primarySidebarRegion.contentHost
                 )}
               </div>
             </div>
@@ -629,9 +641,10 @@ export function Layout({ sidebarSections }: { sidebarSections?: ReactNode }) {
         ) : (
           <SidebarShell
             open={sidebarOpen}
-            collapsed={designSandbox || replacesPrimarySidebar ? false : collapsed}
-            peeking={designSandbox || replacesPrimarySidebar ? false : peeking}
-            resizable
+            collapsed={calmEnabled || (designSandbox || replacesPrimarySidebar ? false : collapsed)}
+            peeking={calmEnabled || designSandbox || replacesPrimarySidebar ? false : peeking}
+            resizable={!calmEnabled}
+            className={calmEnabled ? "calm-primary-shell" : undefined}
             storageKey={designSandbox ? "paperclip.design-proposals.sandbox.sidebar-width" : undefined}
             onPanelMouseEnter={replacesPrimarySidebar ? undefined : handlePanelPointerEnter}
             onPanelMouseLeave={replacesPrimarySidebar ? undefined : handlePanelPointerLeave}
@@ -641,9 +654,9 @@ export function Layout({ sidebarSections }: { sidebarSections?: ReactNode }) {
             {designSandbox ? <DesignSandboxSidebar /> : <>
               <div className="flex flex-1 min-h-0">
                 {replacesPrimarySidebar ? (
-                  <SecondarySidebar>{secondarySidebar}</SecondarySidebar>
+                  secondarySidebarRegion.contentHost
                 ) : (
-                  <Sidebar>{sidebarSections}</Sidebar>
+                  primarySidebarRegion.contentHost
                 )}
               </div>
               <SidebarAccountMenu
@@ -655,12 +668,11 @@ export function Layout({ sidebarSections }: { sidebarSections?: ReactNode }) {
         )}
 
         {!isMobile && ((showsAdjacentSecondarySidebar && !keepsPrimarySidebar) || (designSandbox && replacesPrimarySidebar)) ? (
-          <SecondarySidebar className="w-60 shrink-0">
-            {secondarySidebar}
-          </SecondarySidebar>
+          secondarySidebarRegion.contentHost
         ) : null}
 
         <div className={cn("app-content-column flex min-w-0 flex-col", isMobile ? "w-full" : "h-full flex-1")}>
+          {calmEnabled ? <CalmAreaTabs /> : null}
           <div
             className={cn(
               "app-breadcrumb",
@@ -682,9 +694,7 @@ export function Layout({ sidebarSections }: { sidebarSections?: ReactNode }) {
             !isMobile && useStreamlinedTaskDetailShell && "streamlined-task-detail-surface",
           )}>
             {!isMobile && keepsPrimarySidebar ? (
-              <SecondarySidebar className="w-60 shrink-0 bg-background">
-                {secondarySidebar}
-              </SecondarySidebar>
+              secondarySidebarRegion.contentHost
             ) : null}
             <div className={cn(!isMobile && useStreamlinedTaskDetailShell ? "flex min-w-0 flex-1 flex-col" : "contents")}>
               {!isMobile && useStreamlinedTaskDetailShell ? (
@@ -749,6 +759,13 @@ export function Layout({ sidebarSections }: { sidebarSections?: ReactNode }) {
           </div>
         </div>
       </div>
+      {primarySidebarRegion.parkingHost}
+      {secondarySidebarRegion.parkingHost}
+      {(showsPrimarySidebar || hasActivatedCalmSidebar) ? primarySidebarRegion.renderContent(<Sidebar>{sidebarSections}</Sidebar>) : null}
+      {hasSecondarySidebar ? secondarySidebarRegion.renderContent(<SecondarySidebar className={
+        isMobile ? undefined : keepsPrimarySidebar ? "w-60 shrink-0 bg-background"
+          : showsAdjacentSecondarySidebar || designSandbox ? "w-60 shrink-0" : undefined
+      }>{secondarySidebar}</SecondarySidebar>) : null}
       {isMobile && <MobileBottomNav visible={mobileNavVisible} />}
       <CommandPalette />
       <BoardDialogs />

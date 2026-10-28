@@ -67,6 +67,7 @@ export interface InstanceExperimentalSettings {
    * remains separate so an old opt-out cannot disable the broader UI.
    */
   enableStreamlinedUi: boolean;
+  enableCalmUi: boolean;
   /** @deprecated Compatibility key only. Apps is always enabled. */
   enableApps: boolean;
   /** Exposes chat connector setup and Board surfaces; existing delivery continues when hidden. */

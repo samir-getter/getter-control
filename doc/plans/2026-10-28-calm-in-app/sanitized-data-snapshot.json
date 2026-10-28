@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Read-only Phase 1 evidence for CALM mockups; never represents live tenant metrics",
+  "app": "Getter Control",
+  "sourceCommit": "208d05cb6a00d7a76312f066d29e3a4ed77e81b6",
+  "liveInstance": {
+    "status": "unavailable_at_audit",
+    "httpPort": 3120,
+    "databasePort": 54349,
+    "companyCount": null,
+    "telemetryEnabledInFileConfig": false,
+    "verifiedHumanUsage": null
+  },
+  "databaseExport": {
+    "source": ".getter-control/instances/gettercontrol/data/backups/paperclip-20261028-041427.sql.gz",
+    "createdAtUtc": "2026-10-28T08:14:27.309Z",
+    "lastModifiedAtUtc": "2026-10-28T08:14:32.6023355Z",
+    "timezone": "America/Manaus (UTC-04:00)",
+    "sizeBytes": 83513,
+    "sha256": "7aa057889387e2a614b36b69275988fdd1103b8f69367bfee8ab2498191f390a",
+    "format": "Paperclip JavaScript SQL backup",
+    "gzipDecodedToEnd": true,
+    "lastNonCommentStatement": "COMMIT;",
+    "uncompressedLineCount": 12227,
+    "rowCountMethod": "Allowlisted CREATE TABLE present, no INSERT/COPY/data section for these tables; exporter skips zero-row tables. Default server backup path sets no table exclusions.",
+    "rowCountsInExport": {
+      "companies": 0,
+      "agents": 0,
+      "issues": 0,
+      "routines": 0,
+      "approvals": 0,
+      "company_skills": 0,
+      "company_skill_versions": 0,
+      "cost_events": 0,
+      "finance_events": 0,
+      "heartbeat_runs": 0,
+      "budget_policies": 0,
+      "budget_incidents": 0
+    },
+    "limits": [
+      "Dated export, not current live state or human usage analytics",
+      "No tenant exists in this export; per-company dashboards, spend and budgets are not applicable, not zero-valued tenant KPIs",
+      "SQL was parsed as text only; no restore, database start, writes or execution",
+      "Independent sequential export reads do not prove one atomic snapshot timestamp"
+    ]
+  },
+  "shippedCatalog": {
+    "source": "packages/skills-catalog/generated/catalog.json",
+    "generatedAtUtc": "2026-10-28T04:53:27.205Z",
+    "sha256": "e452a09b52e66ea74bb478c791f7155945c82b1df559539ec85e3aa8bd58e152",
+    "packageName": "@paperclipai/skills-catalog",
+    "packageVersion": "0.3.1",
+    "skillCount": 18,
+    "bundledCount": 11,
+    "optionalCount": 7,
+    "hallmark": {
+      "id": "paperclipai:bundled:design:hallmark",
+      "name": "Hallmark",
+      "category": "design",
+      "kind": "bundled",
+      "defaultInstall": true,
+      "versionFromSkillFrontmatter": "2.0.0",
+      "fileCount": 165,
+      "sourceUrl": "https://github.com/Nutlope/hallmark",
+      "sourceCommit": "6033bab2a8051b5454552d2e8e6cb8f27c483a42",
+      "contentHash": "sha256:7293b94d0fd31af3d39a5e2cf415fa5c95928e8a25b14853e807ebac84c12f16"
+    }
+  },
+  "mockupDataRules": {
+    "allowedPopulatedData": "Actual shipped skills catalogue and Hallmark source facts above",
+    "allowedEmptyState": "First-company onboarding reflecting the dated empty export",
+    "tenantScreens": "Unconfigured/unavailable states and no selected company; do not label unavailable metrics as 0 or invent Jabil production records",
+    "usageRank": null,
+    "selectionBasis": "Provisional operational criticality, explicitly not measured popularity"
+  }
+}

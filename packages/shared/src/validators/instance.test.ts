@@ -6,6 +6,17 @@ import {
 } from "./instance.js";
 
 describe("instance experimental settings validators", () => {
+  it("keeps CALM off unless an instance explicitly enables it", () => {
+    expect(instanceExperimentalSettingsSchema.parse({}).enableCalmUi).toBe(false);
+    for (const enabled of [true, false]) {
+      expect(patchInstanceExperimentalSettingsSchema.parse({ enableCalmUi: enabled }))
+        .toEqual({ enableCalmUi: enabled });
+      expect(instanceExperimentalSettingsSchema.parse({ enableCalmUi: enabled }).enableCalmUi)
+        .toBe(enabled);
+    }
+    expect(patchInstanceExperimentalSettingsSchema.safeParse({ enableCalmUi: "true" }).success)
+      .toBe(false);
+  });
   it("keeps Notebook disabled by default and accepts only explicit boolean rollout values", () => {
     expect(instanceExperimentalSettingsSchema.parse({ enableApps: true, enableMemoryConnectors: true }).enablePaperclipNotebook).toBe(false);
     expect(patchInstanceExperimentalSettingsSchema.parse({})).toEqual({});

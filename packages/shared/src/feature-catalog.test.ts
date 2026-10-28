@@ -30,6 +30,11 @@ function schemaBooleanFlagKeys(): string[] {
 }
 
 describe("INSTANCE_FEATURE_CATALOG", () => {
+  it("keeps CALM a reversible preference disabled for both deployment types", () => {
+    expect(INSTANCE_FEATURE_CATALOG.enableCalmUi).toMatchObject({
+      tier: "preference", cloudDefault: false, selfHostedDefault: false,
+    });
+  });
   it("keeps Notebook a managed rollout disabled for Cloud and self-hosted instances", () => {
     expect(INSTANCE_FEATURE_CATALOG.enablePaperclipNotebook).toMatchObject({
       tier: "managed", cloudDefault: false, selfHostedDefault: false,

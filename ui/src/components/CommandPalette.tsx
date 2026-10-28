@@ -1,5 +1,9 @@
 import { AgentIdentity } from "@/components/AgentIdentity";
 import { useCombinedInboxTasksEnabled } from "@/hooks/useCombinedInboxTasksEnabled";
+import { useCalmUiEnabled } from "@/hooks/useCalmUiEnabled";
+import { useStreamlinedUiEnabled } from "@/hooks/useStreamlinedUiEnabled";
+import { getCalmPageLinks } from "@/lib/calm-navigation";
+import { useCalmNavigationPolicy } from "@/hooks/useCalmNavigationPolicy";
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "@/lib/router";
 import { useQuery } from "@tanstack/react-query";
@@ -105,6 +109,10 @@ export function CommandPalette() {
     retry: false,
   });
   const { enabled: combinedInboxTasksEnabled } = useCombinedInboxTasksEnabled();
+  const { enabled: calmUiEnabled } = useCalmUiEnabled();
+  const { enabled: streamlinedUiEnabled } = useStreamlinedUiEnabled();
+  const calmEnabled = calmUiEnabled && streamlinedUiEnabled;
+  const calmNavigationPolicy = useCalmNavigationPolicy();
   const fileViewerEnabled = experimentalSettings?.enableExperimentalFileViewer === true;
 
   useEffect(() => {
@@ -356,6 +364,10 @@ export function CommandPalette() {
         <CommandSeparator />
 
         <CommandGroup heading="Pages">
+          {calmEnabled ? getCalmPageLinks(experimentalSettings, calmNavigationPolicy).map((page) => <CommandItem key={page.id}
+            value={`${page.label} ${page.href}`} onSelect={() => go(page.href)}>
+            <LayoutDashboard className="mr-2 h-4 w-4" />{page.label}
+          </CommandItem>) : <>
           <CommandItem onSelect={() => go("/dashboard")}>
             <LayoutDashboard className="mr-2 h-4 w-4" />
             Dashboard
@@ -388,6 +400,7 @@ export function CommandPalette() {
             <History className="mr-2 h-4 w-4" />
             Activity
           </CommandItem>
+          </>}
         </CommandGroup>
 
         {visibleIssues.length > 0 && (

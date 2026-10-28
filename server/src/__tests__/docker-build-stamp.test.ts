@@ -20,8 +20,8 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const dockerfile = readFileSync(path.join(repoRoot, "Dockerfile"), "utf8");
-const workflow = readFileSync(path.join(repoRoot, ".github", "workflows", "docker.yml"), "utf8");
-const previewWorkflow = readFileSync(path.join(repoRoot, ".github", "workflows", "release.yml"), "utf8");
+const workflow = readFileSync(path.join(repoRoot, ".github", "upstream-workflows", "docker.yml"), "utf8");
+const previewWorkflow = readFileSync(path.join(repoRoot, ".github", "upstream-workflows", "release.yml"), "utf8");
 
 /**
  * Return the text of the Dockerfile stage that starts at the named target.
@@ -68,7 +68,7 @@ describe("docker build-stamp wiring", () => {
     ).toBeLessThan(serverBuildIdx);
   });
 
-  it("passes PAPERCLIP_BUILD_COMMIT as a build-arg for standard and explicit preview builds", () => {
+  it("passes PAPERCLIP_BUILD_COMMIT in archived upstream standard and preview builds", () => {
     for (const [name, source] of [["standard", workflow], ["preview", previewWorkflow]]) {
       expect(source, `${name} must pass the source commit into the image build`)
         .toMatch(/^\s*PAPERCLIP_BUILD_COMMIT=\$\{\{ (?:github.sha|inputs.source_ref) \}\}$/m);

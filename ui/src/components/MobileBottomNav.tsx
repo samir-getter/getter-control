@@ -15,6 +15,9 @@ import { cn } from "../lib/utils";
 import { useInboxBadge } from "../hooks/useInboxBadge";
 import { useAgentChatEnabled } from "@/hooks/useAgentChatEnabled";
 import { useCombinedInboxTasksEnabled } from "@/hooks/useCombinedInboxTasksEnabled";
+import { useCalmUiEnabled } from "@/hooks/useCalmUiEnabled";
+import { useStreamlinedUiEnabled } from "@/hooks/useStreamlinedUiEnabled";
+import { CalmMobileNavigation } from "./calm/CalmNavigation";
 import { Badge } from "@/components/ui/badge";
 
 interface MobileBottomNavProps {
@@ -45,6 +48,9 @@ export function MobileBottomNav({ visible }: MobileBottomNavProps) {
   const inboxBadge = useInboxBadge(selectedCompanyId);
   const { enabled: agentChatEnabled } = useAgentChatEnabled();
   const { enabled: combinedInboxTasksEnabled } = useCombinedInboxTasksEnabled();
+  const { enabled: calmUiEnabled } = useCalmUiEnabled();
+  const { enabled: streamlinedUiEnabled } = useStreamlinedUiEnabled();
+  const calmEnabled = calmUiEnabled && streamlinedUiEnabled;
 
   // PAP-670: with both flags off the bar is the original Home · Tasks · + ·
   // Agents · Inbox. Agent Chat adds Chat in the second slot (Home · Chat · + ·
@@ -94,7 +100,7 @@ export function MobileBottomNav({ visible }: MobileBottomNavProps) {
       inert={!visible}
       aria-label="Mobile navigation"
     >
-      <div
+      {calmEnabled ? <CalmMobileNavigation unread={inboxBadge.inbox} failed={inboxBadge.failedRuns > 0} /> : <div
         className="grid h-16 px-1"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
@@ -151,7 +157,7 @@ export function MobileBottomNav({ visible }: MobileBottomNavProps) {
             </NavLink>
           );
         })}
-      </div>
+      </div>}
     </nav>
   );
 }

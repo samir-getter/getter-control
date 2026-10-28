@@ -74,13 +74,20 @@ describe("cli telemetry", () => {
     for (const key of CI_ENV_VARS) {
       delete process.env[key];
     }
+    delete process.env.PAPERCLIP_TELEMETRY_DISABLED;
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true })));
   });
 
-  afterEach(() => {
-    process.env = { ...ORIGINAL_ENV };
-    vi.unstubAllGlobals();
-    vi.resetModules();
+  afterEach(async () => {
+    const { getTelemetryClient, flushTelemetry } = await import("../telemetry.js");
+    try {
+      await flushTelemetry();
+    } finally {
+      getTelemetryClient()?.stop();
+      process.env = { ...ORIGINAL_ENV };
+      vi.unstubAllGlobals();
+      vi.resetModules();
+    }
   });
 
   it("respects telemetry.enabled=false from the config file", async () => {
@@ -113,5 +120,24 @@ describe("cli telemetry", () => {
     expect(fs.existsSync(statePath)).toBe(true);
 
     await flushTelemetry();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps explicit environment disablement ahead of the enabled config without sending events", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-cli-telemetry-"));
+    try {
+      process.env.PAPERCLIP_HOME = path.join(root, "home");
+      process.env.PAPERCLIP_INSTANCE_ID = "telemetry-test";
+      process.env.PAPERCLIP_TELEMETRY_DISABLED = "1";
+
+      const { initTelemetry, flushTelemetry } = await import("../telemetry.js");
+      expect(initTelemetry({ enabled: true })).toBeNull();
+      await flushTelemetry();
+
+      expect(fetch).not.toHaveBeenCalled();
+      expect(fs.existsSync(path.join(root, "home", "instances", "telemetry-test", "telemetry", "state.json"))).toBe(false);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });
