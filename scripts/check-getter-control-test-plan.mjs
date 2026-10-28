@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { createWriteStream, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { accessSync, appendFileSync, constants, createWriteStream, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseDocument } from "yaml";
@@ -18,6 +18,17 @@ const groups = {
   c: "general-workspaces-c",
 };
 const laneKeys = ["group", "id", "mode", "native", "shardCount", "shardIndex"];
+const daemonSuites = [
+  "server/src/services/native-runtime/runner-tool-results-prp.integration.test.ts",
+  "server/src/__tests__/case-handoff-native.integration.test.ts",
+  "server/src/services/native-runtime/runner-api.integration.test.ts",
+  "server/src/services/native-runtime/native-session-resume.test.ts",
+  "server/src/services/native-runtime/paperclip-runner-real-server.integration.test.ts",
+];
+const debugProviderSuite = "server/src/services/native-runtime/paperclip-runner-real-server.integration.test.ts";
+const daemonCondition = "matrix.native || steps.process_fixtures.outputs.daemon == 'true'";
+const generalDaemonCondition = "matrix.native == false && steps.process_fixtures.outputs.daemon == 'true'";
+const generalDebugCondition = "matrix.native == false && steps.process_fixtures.outputs.debug_provider == 'true'";
 
 export function readTestWorkflow() {
   const document = parseDocument(readFileSync(workflowPath, "utf8"));
@@ -93,6 +104,35 @@ export function workflowLanes(workflow) {
   assert.equal(run.env?.GETTER_CONTROL_TEST_LANE, "${{ toJSON(matrix) }}", "The executed lane must come from the actual matrix");
   assert.equal(run.if, undefined, "Every matrix lane must run");
   assert.notEqual(run["continue-on-error"], true, "Test failure must not be ignored");
+  const resolve = job.steps.find((step) => step.name === "Resolve selected process fixture requirements");
+  assert.equal(resolve?.id, "process_fixtures", "Process prerequisites must expose checked outputs");
+  assert.equal(resolve.run?.trim(), "node scripts/check-getter-control-test-plan.mjs --resolve-process-fixtures", "Process prerequisites must use the official selected file plan");
+  assert.equal(resolve.env?.GETTER_CONTROL_TEST_LANE, "${{ toJSON(matrix) }}", "Process prerequisites must consume the actual matrix");
+  assert.equal(resolve.if, undefined, "Every lane must resolve its process prerequisites");
+  assert.notEqual(resolve["continue-on-error"], true, "Process prerequisite resolution must succeed");
+  for (const name of ["Select pinned Rust toolchain", "Cache native build inputs"]) {
+    const step = job.steps.find((candidate) => candidate.name === name);
+    assert.ok(step && job.steps.indexOf(resolve) < job.steps.indexOf(step), "Resolve prerequisites before Rust setup and cache");
+    assert.equal(step.if, daemonCondition, "Rust setup and cache must include selected General process suites");
+  }
+  for (const [name, condition, commands] of [
+    ["Prepare selected General Runner daemon before collection", generalDaemonCondition, [
+      "pnpm run preflight:workspace-links",
+      "pnpm --filter @paperclipai/paperclip-runner build:typescript",
+      "pnpm --filter @paperclipai/paperclip-runner build:binary",
+      "test -x packages/paperclip-runner/dist/bin/paperclip-runnerd",
+    ]],
+    ["Prepare selected General debug provider before collection", generalDebugCondition, [
+      "cargo build --locked --manifest-path packages/paperclip-runner/runner/Cargo.toml -p paperclip-runner-core --bin fake-codex-app-server",
+      "test -x packages/paperclip-runner/runner/target/debug/fake-codex-app-server",
+    ]],
+  ]) {
+    const step = job.steps.find((candidate) => candidate.name === name);
+    assert.ok(step && job.steps.indexOf(resolve) < job.steps.indexOf(step) && job.steps.indexOf(step) < job.steps.indexOf(run), "General process prerequisites must precede collection");
+    assert.equal(step.if, condition, "General preparation must follow selected process requirements");
+    assert.notEqual(step["continue-on-error"], true, "General process preparation must succeed");
+    for (const command of commands) assert.ok(step.run?.includes(command), "Missing General process prerequisite: " + command);
+  }
   const prepare = job.steps.find((step) => step.name === "Prepare native process fixtures before collection");
   assert.ok(prepare && job.steps.indexOf(prepare) < job.steps.indexOf(run), "Native fixtures must be prepared before test collection");
   assert.equal(prepare.if, "matrix.native", "Native preparation must run for the native lane");
@@ -134,6 +174,35 @@ export function createRunnerPlanner() {
     }
     return cache.get(key);
   };
+}
+
+export function processFixtureRequirements(lane, plan = createRunnerPlanner(), sourceSha = process.env.GITHUB_SHA ?? null) {
+  validateLane(lane);
+  const selected = plan(runnerArguments(lane)).selectedGeneralServerSuites ?? [];
+  assert.ok(Array.isArray(selected), "Selected process suite plan must be a file list");
+  const suites = selected.filter((file) => lane.native || daemonSuites.includes(file)).sort();
+  return {
+    schemaVersion: 1, lane, sourceSha, suites,
+    daemon: suites.length > 0,
+    debugProvider: lane.native || suites.includes(debugProviderSuite),
+    releaseProvider: lane.native,
+  };
+}
+
+export function assertPreparedProcessFixtures(requirements, cwd = root, platform = process.platform) {
+  const suffix = platform === "win32" ? ".exe" : "";
+  for (const [required, file] of [
+    [requirements.daemon, "packages/paperclip-runner/dist/bin/paperclip-runnerd" + suffix],
+    [requirements.debugProvider, "packages/paperclip-runner/runner/target/debug/fake-codex-app-server" + suffix],
+    [requirements.releaseProvider, "packages/paperclip-runner/runner/target/release/fake-codex-app-server" + suffix],
+  ]) {
+    if (!required) continue;
+    try {
+      accessSync(path.join(cwd, file), constants.R_OK | constants.X_OK);
+    } catch {
+      assert.fail("Missing executable process prerequisite before collection: " + file);
+    }
+  }
 }
 
 function completeSlices(lanes, name) {
@@ -207,6 +276,7 @@ export function verifyTestPlan(workflow = readTestWorkflow(), plan = createRunne
     Array.from({ length: chatCount }, (_, index) => index), "Missing or duplicate chat workers");
   claimFiles(serverSeen, [configuredChatSuite()], "chat");
   sameSet(serverSeen, new Set(general.selectedGeneralServerSuites), "General server coverage differs from the full runner");
+  for (const file of daemonSuites) assert.ok(serverSeen.has(file), "Required process suite disappeared: " + file);
   const serialSeen = new Set();
   for (const lane of lanes.filter((lane) => lane.mode === "serialized")) {
     claimFiles(serialSeen, plan(runnerArguments(lane)).selectedSerializedSuites, lane.id);
@@ -238,6 +308,7 @@ export function verifyTestPlan(workflow = readTestWorkflow(), plan = createRunne
     workspaceProjects: [...projects].sort(),
     chatWorkers: chatWorkers.map((worker) => worker.index).sort((a, b) => a - b),
     groups: Object.fromEntries([...Object.values(groups), "serialized"].map((group) => [group, group === "serialized" ? lanes.filter((lane) => lane.mode === group).length : byGroup(group).length])),
+    processFixtureLanes: lanes.map((lane) => processFixtureRequirements(lane, plan)).filter((requirements) => requirements.daemon),
   };
 }
 
@@ -290,20 +361,54 @@ export async function executeTestLane(lane, {
   return result;
 }
 
-async function runLane() {
+export async function executePreparedTestLane(lane, {
+  cwd = root, logDir = path.join(cwd, ".ci-test-logs"),
+  environment = process.env, planner = createRunnerPlanner(), ...execution
+} = {}) {
+  const requirements = processFixtureRequirements(lane, planner, environment.GITHUB_SHA ?? null);
+  try {
+    const saved = JSON.parse(readFileSync(path.join(logDir, lane.id + "-fixtures.json"), "utf8"));
+    assert.deepEqual(saved, requirements, "Prepared process prerequisites must match the current source and selected lane");
+    assertPreparedProcessFixtures(requirements, cwd);
+  } catch (error) {
+    mkdirSync(logDir, { recursive: true });
+    appendFileSync(path.join(logDir, lane.id + "-fixture-check.log"), "[getter-tests] Process prerequisite check failed: " + error.message + "\n");
+    throw error;
+  }
+  return executeTestLane(lane, { cwd, logDir, environment, ...execution });
+}
+
+function requestedMatrixLane() {
   const requested = JSON.parse(process.env.GETTER_CONTROL_TEST_LANE ?? "null");
   assert.ok(requested, "GETTER_CONTROL_TEST_LANE must contain a matrix lane");
   validateLane(requested);
   const lane = workflowLanes(readTestWorkflow()).find((candidate) => candidate.id === requested.id);
   assert.deepEqual(requested, lane, "Executed lane must match the checked workflow matrix");
-  const result = await executeTestLane(lane);
+  return lane;
+}
+
+function resolveProcessFixtures() {
+  const lane = requestedMatrixLane();
+  const requirements = processFixtureRequirements(lane);
+  const logDir = path.join(root, ".ci-test-logs");
+  mkdirSync(logDir, { recursive: true });
+  writeFileSync(path.join(logDir, lane.id + "-fixtures.json"), JSON.stringify(requirements, null, 2) + "\n");
+  assert.ok(process.env.GITHUB_OUTPUT, "GITHUB_OUTPUT is required for checked process prerequisite outputs");
+  appendFileSync(process.env.GITHUB_OUTPUT, "daemon=" + requirements.daemon + "\ndebug_provider=" + requirements.debugProvider + "\n");
+  console.log(JSON.stringify(requirements, null, 2));
+}
+
+async function runLane() {
+  const lane = requestedMatrixLane();
+  const result = await executePreparedTestLane(lane);
   process.exitCode = result.exitCode ?? 1;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    assert.ok(process.argv.length <= 3, "Only --run-lane is supported");
+    assert.ok(process.argv.length <= 3, "Only a checked lane mode is supported");
     if (process.argv[2] === "--run-lane") await runLane();
+    else if (process.argv[2] === "--resolve-process-fixtures") resolveProcessFixtures();
     else {
       assert.equal(process.argv[2], undefined, "Unknown option");
       console.log(JSON.stringify(verifyTestPlan(), null, 2));

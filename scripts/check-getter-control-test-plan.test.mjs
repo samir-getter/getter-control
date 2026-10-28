@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   createRunnerPlanner,
+  executePreparedTestLane,
   executeTestLane,
+  processFixtureRequirements,
   readTestWorkflow,
   runnerArguments,
   verifyTestPlan,
@@ -129,6 +131,67 @@ test("both uploads retain hidden logs and reject absent logs or skipped evidence
   }
 });
 
+test("selected General process preparation cannot be omitted, delayed or gated by native membership", () => {
+  for (const name of ["Prepare selected General Runner daemon before collection", "Prepare selected General debug provider before collection"]) {
+    const missing = copy();
+    missing.jobs.tests.steps = missing.jobs.tests.steps.filter((step) => step.name !== name);
+    assert.throws(() => workflowLanes(missing), /General process prerequisites must precede collection/);
+    const late = copy();
+    const index = late.jobs.tests.steps.findIndex((step) => step.name === name);
+    late.jobs.tests.steps.push(late.jobs.tests.steps.splice(index, 1)[0]);
+    assert.throws(() => workflowLanes(late), /General process prerequisites must precede collection/);
+    const nativeOnly = copy();
+    nativeOnly.jobs.tests.steps.find((step) => step.name === name).if = "matrix.native";
+    assert.throws(() => workflowLanes(nativeOnly), /follow selected process requirements/);
+    const noCheck = copy();
+    const step = noCheck.jobs.tests.steps.find((candidate) => candidate.name === name);
+    step.run = step.run.split("\n").filter((line) => !line.includes("test -x")).join("\n");
+    assert.throws(() => workflowLanes(noCheck), /Missing General process prerequisite/);
+  }
+  const noBinary = copy();
+  const daemon = noBinary.jobs.tests.steps.find((step) => step.name === "Prepare selected General Runner daemon before collection");
+  daemon.run = daemon.run.replace("build:binary", "build:typescript");
+  assert.throws(() => workflowLanes(noBinary), /Missing General process prerequisite/);
+});
+
+test("fixture resolution and Rust setup consume the checked matrix before preparation", () => {
+  const missing = copy();
+  missing.jobs.tests.steps = missing.jobs.tests.steps.filter((step) => step.name !== "Resolve selected process fixture requirements");
+  assert.throws(() => workflowLanes(missing), /checked outputs/);
+  const forged = copy();
+  forged.jobs.tests.steps.find((step) => step.id === "process_fixtures").env.GETTER_CONTROL_TEST_LANE = '{"id":"server-02"}';
+  assert.throws(() => workflowLanes(forged), /consume the actual matrix/);
+  const late = copy();
+  const index = late.jobs.tests.steps.findIndex((step) => step.id === "process_fixtures");
+  late.jobs.tests.steps.push(late.jobs.tests.steps.splice(index, 1)[0]);
+  assert.throws(() => workflowLanes(late), /before Rust setup and cache/);
+  for (const name of ["Select pinned Rust toolchain", "Cache native build inputs"]) {
+    const nativeOnly = copy();
+    nativeOnly.jobs.tests.steps.find((step) => step.name === name).if = "matrix.native";
+    assert.throws(() => workflowLanes(nativeOnly), /include selected General process suites/);
+  }
+});
+
+test("real selected files determine process fixture lanes and survive shard remapping", () => {
+  const report = verifyTestPlan(original, plan);
+  const general = report.processFixtureLanes.filter((requirements) => !requirements.lane.native);
+  assert.deepEqual(general.map((requirements) => requirements.lane.id), ["server-02", "server-03", "server-05", "server-07", "server-10"]);
+  assert.deepEqual(general.filter((requirements) => requirements.debugProvider).map((requirements) => requirements.lane.id), ["server-10"]);
+  const first = matrix(original).find((lane) => lane.id === "server-01");
+  const movedFile = "server/src/services/native-runtime/paperclip-runner-real-server.integration.test.ts";
+  assert.equal(processFixtureRequirements(first, plan).daemon, false);
+  const remapped = (args) => ({ ...plan(args), selectedGeneralServerSuites: [movedFile] });
+  const moved = processFixtureRequirements(first, remapped, "fixture-sha");
+  assert.equal(moved.daemon, true);
+  assert.equal(moved.debugProvider, true);
+  assert.deepEqual(moved.suites, [movedFile]);
+  assert.equal(moved.sourceSha, "fixture-sha");
+  assert.equal(processFixtureRequirements(first, () => ({ selectedGeneralServerSuites: [] })).daemon, false);
+  for (const id of ["ui-cli-01", "chat-01", "serial-01", "database", "packages"]) {
+    assert.equal(processFixtureRequirements(matrix(original).find((lane) => lane.id === id), plan).daemon, false);
+  }
+});
+
 function temporaryFixture(t) {
   const parent = realpathSync(os.tmpdir());
   const folder = realpathSync(mkdtempSync(path.join(parent, "getter-calm-ci-")));
@@ -211,4 +274,79 @@ test("the actual CLI rejects a caller-supplied lane before spawning tests", () =
   assert.equal(result.status, 1);
   assert.match(result.stderr, /safe log filename/);
   assert.doesNotMatch(result.stdout, /\[getter-tests\] pnpm/);
+});
+
+test("the actual fixture CLI writes outputs and a same-source selected-suite record, rejecting forged lanes", (t) => {
+  const folder = temporaryFixture(t);
+  const script = fileURLToPath(new URL("./check-getter-control-test-plan.mjs", import.meta.url));
+  const repo = fileURLToPath(new URL("../", import.meta.url));
+  for (const [id, daemon, debug] of [["server-01", false, false], ["server-07", true, false], ["server-10", true, true], ["native-runner", true, true]]) {
+    const lane = matrix(original).find((candidate) => candidate.id === id);
+    const record = path.join(repo, ".ci-test-logs", id + "-fixtures.json");
+    const previous = existsSync(record) ? readFileSync(record) : null;
+    t.after(() => { if (previous) writeFileSync(record, previous); else rmSync(record, { force: true }); });
+    const output = path.join(folder, id + "-outputs");
+    const environment = { ...process.env, GITHUB_SHA: "fixture-sha", GITHUB_OUTPUT: output, GETTER_CONTROL_TEST_LANE: JSON.stringify(lane) };
+    delete environment.PAPERCLIP_TEST_DATABASE_URL;
+    const result = spawnSync(process.execPath, [script, "--resolve-process-fixtures"], { encoding: "utf8", env: environment });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(readFileSync(output, "utf8"), "daemon=" + daemon + "\ndebug_provider=" + debug + "\n");
+    const saved = JSON.parse(readFileSync(record, "utf8"));
+    assert.deepEqual(saved, JSON.parse(result.stdout));
+    assert.equal(saved.sourceSha, "fixture-sha");
+    assert.deepEqual(saved.lane, lane);
+  }
+  const output = path.join(folder, "forged-outputs");
+  const forged = { ...matrix(original)[0], shardIndex: 11 };
+  const result = spawnSync(process.execPath, [script, "--resolve-process-fixtures"], {
+    encoding: "utf8", env: { ...process.env, GITHUB_OUTPUT: output, GETTER_CONTROL_TEST_LANE: JSON.stringify(forged) },
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /must match the checked workflow matrix/);
+  assert.equal(existsSync(output), false);
+});
+
+test("missing binaries and altered source records prevent a real child from starting; prepared binaries admit it", async (t) => {
+  const folder = temporaryFixture(t);
+  const lane = matrix(original).find((candidate) => candidate.id === "server-10");
+  const child = path.join(folder, "child.mjs");
+  const marker = path.join(folder, "started");
+  writeFileSync(child, 'import { writeFileSync } from "node:fs"; writeFileSync(process.env.TEST_CHILD_MARKER, "started"); console.log("prepared child executed");');
+  const environment = { ...process.env, GITHUB_SHA: "fixture-sha", TEST_CHILD_MARKER: marker };
+  delete environment.PAPERCLIP_TEST_DATABASE_URL;
+  const requirements = processFixtureRequirements(lane, plan, environment.GITHUB_SHA);
+  const record = path.join(folder, lane.id + "-fixtures.json");
+  writeFileSync(record, JSON.stringify(requirements));
+  const execute = () => executePreparedTestLane(lane, {
+    cwd: folder, logDir: folder, environment, planner: plan,
+    executable: process.execPath, executableArguments: [child],
+  });
+  await assert.rejects(execute, /Missing executable process prerequisite/);
+  assert.equal(existsSync(marker), false);
+  const suffix = process.platform === "win32" ? ".exe" : "";
+  const daemon = path.join(folder, "packages/paperclip-runner/dist/bin/paperclip-runnerd" + suffix);
+  mkdirSync(path.dirname(daemon), { recursive: true });
+  writeFileSync(daemon, "fixture daemon");
+  chmodSync(daemon, 0o755);
+  await assert.rejects(execute, /target.debug.fake-codex-app-server/);
+  assert.equal(existsSync(marker), false);
+  const provider = path.join(folder, "packages/paperclip-runner/runner/target/debug/fake-codex-app-server" + suffix);
+  mkdirSync(path.dirname(provider), { recursive: true });
+  writeFileSync(provider, "fixture provider");
+  chmodSync(provider, 0o755);
+  writeFileSync(record, JSON.stringify({ ...requirements, sourceSha: "other-source" }));
+  await assert.rejects(execute, /match the current source and selected lane/);
+  assert.equal(existsSync(marker), false);
+  writeFileSync(record, JSON.stringify({ ...requirements, suites: [] }));
+  await assert.rejects(execute, /match the current source and selected lane/);
+  assert.equal(existsSync(marker), false);
+  writeFileSync(record, JSON.stringify(requirements));
+  const result = await execute();
+  assert.equal(result.exitCode, 0);
+  assert.equal(readFileSync(marker, "utf8"), "started");
+  assert.match(readFileSync(path.join(folder, lane.id + ".log"), "utf8"), /prepared child executed/);
+  const failedChecks = readFileSync(path.join(folder, lane.id + "-fixture-check.log"), "utf8");
+  assert.match(failedChecks, /Missing executable process prerequisite.*dist.bin.paperclip-runnerd/);
+  assert.match(failedChecks, /Missing executable process prerequisite.*target.debug.fake-codex-app-server/);
+  assert.match(failedChecks, /match the current source and selected lane/);
 });

@@ -131,15 +131,20 @@ jobs:
         run: |
           mkdir -p .ci-test-logs
           pnpm install --frozen-lockfile 2>&1 | tee .ci-test-logs/install.log
+      - name: Resolve selected process fixture requirements
+        id: process_fixtures
+        env:
+          GETTER_CONTROL_TEST_LANE: ${{ toJSON(matrix) }}
+        run: node scripts/check-getter-control-test-plan.mjs --resolve-process-fixtures
       - name: Select pinned Rust toolchain
-        if: matrix.native
+        if: matrix.native || steps.process_fixtures.outputs.daemon == 'true'
         working-directory: packages/paperclip-runner
         run: |
           rustup show
           toolchain=$(rustup show active-toolchain | awk '{print $1}')
           printf 'RUSTUP_TOOLCHAIN=%s\n' "$toolchain" >> "$GITHUB_ENV"
       - name: Cache native build inputs
-        if: matrix.native
+        if: matrix.native || steps.process_fixtures.outputs.daemon == 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -147,6 +152,18 @@ jobs:
             ~/.cargo/git
             packages/paperclip-runner/runner/target
           key: getter-native-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('packages/paperclip-runner/rust-toolchain.toml', 'packages/paperclip-runner/runner/Cargo.lock', 'packages/paperclip-runner/runner/**/Cargo.toml', 'packages/paperclip-runner/runner/**/*.rs') }}
+      - name: Prepare selected General Runner daemon before collection
+        if: matrix.native == false && steps.process_fixtures.outputs.daemon == 'true'
+        run: |
+          pnpm run preflight:workspace-links 2>&1 | tee .ci-test-logs/general-runner-preflight.log
+          pnpm --filter @paperclipai/paperclip-runner build:typescript 2>&1 | tee .ci-test-logs/general-runner-typescript.log
+          pnpm --filter @paperclipai/paperclip-runner build:binary 2>&1 | tee .ci-test-logs/general-runner-binary.log
+          test -x packages/paperclip-runner/dist/bin/paperclip-runnerd
+      - name: Prepare selected General debug provider before collection
+        if: matrix.native == false && steps.process_fixtures.outputs.debug_provider == 'true'
+        run: |
+          cargo build --locked --manifest-path packages/paperclip-runner/runner/Cargo.toml -p paperclip-runner-core --bin fake-codex-app-server 2>&1 | tee .ci-test-logs/general-runner-debug-provider.log
+          test -x packages/paperclip-runner/runner/target/debug/fake-codex-app-server
       - name: Prepare native process fixtures before collection
         if: matrix.native
         run: |
