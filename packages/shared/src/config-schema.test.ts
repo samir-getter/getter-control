@@ -6,7 +6,7 @@ import {
 } from "./config-schema.js";
 
 describe("paperclip config schema", () => {
-  it("defaults omitted runtime paths to legacy instance-root locations", () => {
+  it("defaults omitted runtime paths to Getter Control instance-root locations", () => {
     const parsed = paperclipConfigSchema.parse({
       $meta: {
         version: 1,
@@ -22,11 +22,11 @@ describe("paperclip config schema", () => {
       server: {},
     });
 
-    expect(parsed.database.embeddedPostgresDataDir).toBe("~/.paperclip/instances/default/db");
-    expect(parsed.database.backup.dir).toBe("~/.paperclip/instances/default/data/backups");
-    expect(parsed.logging.logDir).toBe("~/.paperclip/instances/default/logs");
-    expect(parsed.storage.localDisk.baseDir).toBe("~/.paperclip/instances/default/data/storage");
-    expect(parsed.secrets.localEncrypted.keyFilePath).toBe("~/.paperclip/instances/default/secrets/master.key");
+    expect(parsed.database.embeddedPostgresDataDir).toBe("~/.getter-control/instances/default/db");
+    expect(parsed.database.backup.dir).toBe("~/.getter-control/instances/default/data/backups");
+    expect(parsed.logging.logDir).toBe("~/.getter-control/instances/default/logs");
+    expect(parsed.storage.localDisk.baseDir).toBe("~/.getter-control/instances/default/data/storage");
+    expect(parsed.secrets.localEncrypted.keyFilePath).toBe("~/.getter-control/instances/default/secrets/master.key");
   });
 
   it("retains extension keys at the top level and every nested config boundary", () => {

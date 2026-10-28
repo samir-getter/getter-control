@@ -5,7 +5,7 @@ import { applyDevRunnerOptions } from "../../../scripts/dev-runner-options.ts";
 
 describe("applyDevRunnerOptions", () => {
   it("turns --data-dir into isolated Paperclip paths and consumes the option", () => {
-    const env: NodeJS.ProcessEnv = {};
+    const env: NodeJS.ProcessEnv = { GETTER_CONTROL_HOME: "/ambient/getter-control" };
     const cwd = path.join(os.tmpdir(), "paperclip-dev-runner-options");
     const previousInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
     process.env.PAPERCLIP_INSTANCE_ID = "ambient-test-instance";
@@ -23,6 +23,7 @@ describe("applyDevRunnerOptions", () => {
         dataDir: expectedHome,
       });
       expect(env.PAPERCLIP_HOME).toBe(expectedHome);
+      expect(env.GETTER_CONTROL_HOME).toBe(expectedHome);
       expect(env.PAPERCLIP_INSTANCE_ID).toBe("default");
       expect(env.PAPERCLIP_CONFIG).toBe(
         path.join(expectedHome, "instances", "default", "config.json"),
@@ -55,7 +56,7 @@ describe("applyDevRunnerOptions", () => {
     applyDevRunnerOptions(["--data-dir", "/isolated/home"], env, "/unused");
 
     expect(env.PAPERCLIP_CONFIG).toBe(
-      path.join("/isolated/home", "instances", "experiment", "config.json"),
+      path.resolve("/isolated/home", "instances", "experiment", "config.json"),
     );
   });
 
@@ -67,7 +68,7 @@ describe("applyDevRunnerOptions", () => {
 
     applyDevRunnerOptions(["--data-dir", "/isolated/home"], env, "/unused");
 
-    expect(env.PAPERCLIP_HOME).toBe("/isolated/home");
+    expect(env.PAPERCLIP_HOME).toBe(path.resolve("/isolated/home"));
     expect(env.PAPERCLIP_CONFIG).toBe("/explicit/config.json");
     expect(env.PAPERCLIP_CONTEXT).toBe("/explicit/context.json");
   });

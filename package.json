@@ -1,8 +1,12 @@
 {
-  "name": "paperclip",
+  "name": "getter-control",
   "private": true,
   "type": "module",
   "scripts": {
+    "getter-control": "node scripts/getter-control.mjs",
+    "getter-control:prepare": "pnpm run preflight:workspace-links && pnpm --filter @paperclipai/paperclip-runner build:typescript && pnpm --filter @paperclipai/plugin-sdk ensure-build-deps",
+    "getter-control:cli": "node scripts/getter-control.mjs --cli",
+    "test:getter-control": "node --test scripts/getter-control.test.mjs scripts/getter-control-lifecycle.test.mjs",
     "perf:workspace-admission": "node --import ./server/node_modules/tsx/dist/loader.mjs server/scripts/benchmark-workspace-admission.ts",
     "postinstall": "node scripts/link-plugin-dev-sdk.mjs",
     "preflight:workspace-links": "node cli/node_modules/tsx/dist/cli.mjs scripts/ensure-workspace-package-links.ts",

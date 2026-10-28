@@ -23,6 +23,7 @@ coverage/
 .LSOverride
 data/
 .paperclip/
+.getter-control/
 .pnpm-store/
 tmp-*
 cli/tmp/

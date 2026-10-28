@@ -47,9 +47,8 @@ import { registerManagedAgentCommands } from "./commands/managed-agent.js";
 import { registerAssetCommands } from "./commands/client/asset.js";
 import { registerSkillCommands } from "./commands/client/skill.js";
 import { cliVersion } from "./version.js";
-import { installCommand } from "./commands/install.js";
+import { GETTER_CONTROL_SOURCE_HELP, getterInstallCommand, getterUpdateCommand, rejectGetterManagedDistribution } from "./getter-distribution.js";
 import { uninstallCommand } from "./commands/uninstall.js";
-import { updateCommand } from "./commands/update.js";
 import { registerServiceCommands } from "./commands/service.js";
 import { registerConnectionIntentCommands } from "./commands/client/connections.js";
 import {
@@ -62,24 +61,25 @@ import {
 
 const program = new Command();
 const DATA_DIR_OPTION_HELP =
-  "Paperclip data directory root (isolates state from ~/.paperclip)";
+  "Getter Control data directory root (default: ~/.getter-control)";
 
 program.enablePositionalOptions();
 
 program
   .name("paperclipai")
-  .description("Paperclip CLI — setup, diagnose, and configure your instance")
+  .description("Getter Control CLI — setup, diagnose, and configure your instance")
   .version(cliVersion);
 
 program
   .command("install")
-  .description("Install Paperclip into a managed per-user CLI store")
-  .option("--canary", "Install the npm canary channel")
-  .option("--version <version>", "Install an exact published npm version")
-  .option("--ref <ref>", "Install a GitHub branch, tag, or commit SHA")
-  .option("--repo <owner/name>", "Override the GitHub repository used with --ref")
-  .option("-y, --yes", "Consent to git-ref code execution and supported shell PATH updates without prompting")
-  .action(installCommand);
+  .description("Managed installation is unavailable; use the Getter Control source setup guide")
+  .option("--canary", "Compatibility option; managed installation is unavailable")
+  .option("--version <version>", "Compatibility option; managed installation is unavailable")
+  .option("--ref <ref>", "Compatibility option; use a source checkout for this ref")
+  .option("--repo <owner/name>", "Compatibility option; use a source checkout for this repo")
+  .option("-y, --yes", "Compatibility option; managed installation is unavailable")
+  .addHelpText("after", `\n${GETTER_CONTROL_SOURCE_HELP}`)
+  .action(getterInstallCommand);
 
 program
   .command("uninstall")
@@ -89,19 +89,25 @@ program
 program
   .command("update")
   .alias("upgrade")
-  .description("Check, update, or roll back the Paperclip CLI")
-  .option("--latest", "Switch to the latest stable channel")
-  .option("--canary", "Switch to the canary channel")
-  .option("--version <version>", "Install an exact published version")
-  .option("--rollback", "Flip back to the retained previous managed payload")
+  .description("Show how to update an unmanaged Getter Control source checkout")
+  .option("--latest", "Compatibility option; managed updates are unavailable")
+  .option("--canary", "Compatibility option; managed updates are unavailable")
+  .option("--version <version>", "Compatibility option; managed updates are unavailable")
+  .option("--rollback", "Compatibility option; managed rollback is unavailable")
   .option("--check", "Check for an available update without applying it")
   .option("--dry-run", "Print the action without changing anything")
   .option("--json", "Print machine-readable output")
   .option("-y, --yes", "Confirm an explicit downgrade")
   .option("--no-backup", "Skip the pre-update database backup")
-  .action(updateCommand);
+  .action(getterUpdateCommand);
 
 program.hook("preAction", async (_thisCommand, actionCommand) => {
+  if ((actionCommand.parent === program && ["install", "uninstall"].includes(actionCommand.name())) || actionCommand.parent?.name() === "service") {
+    rejectGetterManagedDistribution();
+  }
+  // Distribution inspection does not need provider config or telemetry. The
+  // guarded action only emits source-update instructions for this fork.
+  if (actionCommand.parent === program && actionCommand.name() === "update") return;
   if (actionCommand.parent?.name() === "runtime") return; // Public runtime setup never reads instance config or credentials.
   const options = actionCommand.optsWithGlobals() as DataDirOptionLike & TestDriveOptions;
   let dataDirOptions: DataDirOptionLike = options;

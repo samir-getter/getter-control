@@ -89,7 +89,7 @@ describe("ui branding", () => {
     expect(renderRuntimeBrandingMeta(branding)).not.toContain('name="paperclip-instance-id"');
   });
 
-  it("rewrites the favicon and runtime branding blocks for worktree instances only", () => {
+  it("uses the Getter Control favicon by default and dynamic branding for worktree instances", () => {
     const branded = applyUiBranding(TEMPLATE, {
       PAPERCLIP_IN_WORKTREE: "true",
       PAPERCLIP_WORKTREE_NAME: "paperclip-pr-432",
@@ -100,7 +100,9 @@ describe("ui branding", () => {
     expect(branded).not.toContain('href="/favicon.svg"');
 
     const defaultHtml = applyUiBranding(TEMPLATE, {});
-    expect(defaultHtml).toContain('href="/favicon.svg"');
+    expect(defaultHtml).toContain('href="/getter-control.svg"');
+    expect(defaultHtml).not.toContain('href="/favicon.svg"');
+    expect(defaultHtml).not.toContain('href="/favicon.ico"');
     expect(defaultHtml).not.toContain('name="paperclip-worktree-name"');
   });
 });

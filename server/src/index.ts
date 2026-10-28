@@ -1837,14 +1837,19 @@ async function startServerWithDatabaseTeardown(
     // Startup housekeeping: provider and connection sweeps that every timer tick
     // repeats and that neither serving requests nor run recovery depends on.
     // Readiness does not wait for it. It is tracked as scheduler work, so idle
-    // sleep and shutdown wait for it. Each step logs its own failure and the
-    // next step still runs. The scheduler interval starts after it, so the login
-    // reapers and the lease cleanup still finish before the first timer tick.
+    // sleep and shutdown wait for it. Each step logs its own failure. Subsequent
+    // steps run unless shutdown has stopped scheduler work. The scheduler interval
+    // starts after housekeeping, so the login reapers and lease cleanup finish
+    // before the first timer tick.
     const runStartupHousekeeping = async () => {
-      const step = (name: string, work: () => Promise<unknown>) =>
-        work().catch((err: unknown) => {
+      const step = async (name: string, work: () => Promise<unknown>) => {
+        if (heartbeatSchedulerStopped) return;
+        try {
+          await work();
+        } catch (err: unknown) {
           logger.error({ err, startupStep: name }, "startup housekeeping step failed");
-        });
+        }
+      };
       await step("secret_proposal_expiry", () => registerSecretProposalExpiryWork(deliveryWork, secretProposals,
         () => !isIdleTaskDrainActive() && !heartbeatSchedulerStopped && !isWarmStandby()).ready);
       await step("custom_image_setup_cleanup", () => registerCustomImageCleanupWork(deliveryWork, environmentCustomImages,

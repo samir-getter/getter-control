@@ -18,7 +18,7 @@ function findConfigFileFromAncestors(startDir: string): string | null {
   let currentDir = absoluteStartDir;
 
   while (true) {
-    const candidate = path.resolve(currentDir, ".paperclip", DEFAULT_CONFIG_BASENAME);
+    const candidate = path.resolve(currentDir, ".getter-control", DEFAULT_CONFIG_BASENAME);
     if (fs.existsSync(candidate)) {
       return candidate;
     }
@@ -129,7 +129,8 @@ function durableCopyFile(sourcePath: string, destinationPath: string, flags = 0)
   fs.copyFileSync(sourcePath, destinationPath, flags);
   fs.chmodSync(destinationPath, 0o600);
 
-  const backupDescriptor = fs.openSync(destinationPath, "r");
+  // Windows FlushFileBuffers requires a descriptor opened for writing.
+  const backupDescriptor = fs.openSync(destinationPath, "r+");
   try {
     fs.fsyncSync(backupDescriptor);
   } finally {

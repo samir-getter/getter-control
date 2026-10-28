@@ -1,0 +1,52 @@
+name: Getter Control
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: getter-control-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_BUILD_JOBS: "2"
+  PAPERCLIP_TELEMETRY_DISABLED: "1"
+  PAPERCLIP_ANNOUNCEMENTS_ENABLED: "false"
+  PAPERCLIP_UPDATE_CHECK: "0"
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26.12.1
+          cache: pnpm
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+      - name: Select pinned Rust toolchain for every build and test
+        working-directory: packages/paperclip-runner
+        run: |
+          rustup show
+          toolchain=$(rustup show active-toolchain | awk '{print $1}')
+          printf 'RUSTUP_TOOLCHAIN=%s\n' "$toolchain" >> "$GITHUB_ENV"
+      - name: Launcher isolation tests
+        run: pnpm test:getter-control
+      - name: Build
+        run: pnpm build
+      - name: Typecheck
+        run: pnpm -r typecheck
+      - name: Unit and integration tests
+        run: pnpm test:run
+      - name: Design token checks
+        run: pnpm check:token-gates

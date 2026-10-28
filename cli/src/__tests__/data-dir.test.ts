@@ -8,6 +8,7 @@ const ORIGINAL_ENV = { ...process.env };
 describe("applyDataDirOverride", () => {
   beforeEach(() => {
     process.env = { ...ORIGINAL_ENV };
+    delete process.env.GETTER_CONTROL_HOME;
     delete process.env.PAPERCLIP_HOME;
     delete process.env.PAPERCLIP_CONFIG;
     delete process.env.PAPERCLIP_CONTEXT;
@@ -19,6 +20,7 @@ describe("applyDataDirOverride", () => {
   });
 
   it("sets PAPERCLIP_HOME and isolated default config/context paths", () => {
+    process.env.GETTER_CONTROL_HOME = "~/ambient-getter-control";
     const home = applyDataDirOverride({
       dataDir: "~/paperclip-data",
       config: undefined,
@@ -28,6 +30,7 @@ describe("applyDataDirOverride", () => {
     const expectedHome = path.resolve(os.homedir(), "paperclip-data");
     expect(home).toBe(expectedHome);
     expect(process.env.PAPERCLIP_HOME).toBe(expectedHome);
+    expect(process.env.GETTER_CONTROL_HOME).toBe(expectedHome);
     expect(process.env.PAPERCLIP_CONFIG).toBe(
       path.resolve(expectedHome, "instances", "default", "config.json"),
     );

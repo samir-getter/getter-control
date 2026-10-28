@@ -4,7 +4,8 @@ import * as p from "@clack/prompts";
 import pc from "picocolors";
 import type { PaperclipConfig } from "./config/schema.js";
 import { openUrl } from "./client/board-auth.js";
-import { installCommand, runCommandWithDiagnostics, smokePayload } from "./commands/install.js";
+import { runCommandWithDiagnostics, smokePayload } from "./commands/install.js";
+import { GETTER_CONTROL_SOURCE_HELP, getterInstallCommand } from "./getter-distribution.js";
 import { resolvePaperclipInstanceId } from "./config/home.js";
 import { readRuntimeInfo, type PaperclipRuntimeInfo } from "./runtime-info.js";
 import {
@@ -20,7 +21,6 @@ import {
   type ServiceManagerDetection,
 } from "./services/service-manager.js";
 import { buildLocalAppUrl, buildLocalHealthUrl } from "./utils/health-url.js";
-import { packageVersion } from "./version.js";
 
 export type OnboardServiceOptions = {
   yes?: boolean;
@@ -138,7 +138,13 @@ type OnboardServiceDependencies = {
 // The service definition targets the managed shim. An ephemeral run (npx)
 // never lays it down, so installing the service without this step creates
 // a definition that crash-loops on a missing binary.
-export async function ensureServiceShim(options: { installIfMissing?: boolean } = {}): Promise<EnsureShimResult> {
+export async function ensureServiceShim(_options: { installIfMissing?: boolean } = {}): Promise<EnsureShimResult> {
+  return { ok: false, installedNow: false, reason: GETTER_CONTROL_SOURCE_HELP };
+}
+
+// Retained as an internal compatibility helper; source onboarding uses the
+// guarded entry point above and does not inspect or restore a managed shim.
+export async function ensureManagedServiceShim(options: { installIfMissing?: boolean } = {}): Promise<EnsureShimResult> {
   const shimPath = resolveServiceShimPath();
   if (await isExecutableFile(shimPath)) {
     return { ok: true, installedNow: false };
@@ -170,18 +176,13 @@ export async function ensureServiceShim(options: { installIfMissing?: boolean } 
     } else if (manifest?.source === "git" && manifest.repo) {
       // A managed git payload must be preserved as-is: reinstall the
       // exact revision the manifest records, not an npm release.
-      await installCommand({ repo: manifest.repo, ref: manifest.sha ?? manifest.ref, yes: true });
-    } else if (isInstallableReleaseVersion(packageVersion)) {
-      // packageVersion, not cliVersion: a managed executable's cliVersion
-      // carries provenance text that is not an installable npm spec.
-      await installCommand({ version: packageVersion, yes: true });
+      await getterInstallCommand({ repo: manifest.repo, ref: manifest.sha ?? manifest.ref, yes: true });
     } else {
       return {
         ok: false,
         installedNow: false,
         reason:
-          `this build reports version ${packageVersion}, which is not an installable release; ` +
-          "run `paperclipai install` (or `paperclipai install --repo <repo> --ref <ref>` for source builds) first",
+          GETTER_CONTROL_SOURCE_HELP,
       };
     }
   } catch (error) {
@@ -203,7 +204,7 @@ export async function ensureServiceShim(options: { installIfMissing?: boolean } 
 
 const defaultDependencies: OnboardServiceDependencies = {
   detect: (instanceId) => detectServiceManager({ instanceId }),
-  ensureServiceShim: () => ensureServiceShim(),
+  ensureServiceShim: () => ensureManagedServiceShim(),
   confirm: async () => {
     const answer = await p.confirm({
       message: "Install Paperclip as a background service?",
@@ -225,6 +226,18 @@ const defaultDependencies: OnboardServiceDependencies = {
 };
 
 export async function handleOnboardService(
+  options: OnboardServiceOptions,
+  dependencies: Partial<OnboardServiceDependencies> = {},
+): Promise<boolean> {
+  if (options.installService === true) {
+    (dependencies.warn ?? defaultDependencies.warn)(GETTER_CONTROL_SOURCE_HELP);
+  }
+  return false;
+}
+
+// Retain upstream service orchestration for contract regression coverage while
+// the Getter Control source distribution keeps its public entry point closed.
+export async function handleManagedOnboardService(
   options: OnboardServiceOptions,
   dependencies: Partial<OnboardServiceDependencies> = {},
 ): Promise<boolean> {

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { applyUiBranding } from "../ui-branding.js";
 import { createCachedViteHtmlRenderer, type ViteWatcherHost } from "../vite-html-renderer.js";
@@ -31,6 +32,27 @@ describe("createCachedViteHtmlRenderer", () => {
     vi.unstubAllEnvs();
     for (const dir of tempDirs.splice(0)) {
       fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves the Getter Control favicon when branding the real UI template for normal instances", async () => {
+    const uiRoot = fileURLToPath(new URL("../../../ui/", import.meta.url));
+    const renderer = createCachedViteHtmlRenderer({
+      vite: { watcher: createWatcher(), transformIndexHtml: async (_url, html) => html },
+      uiRoot,
+      brandHtml: (html) => applyUiBranding(html, {}),
+    });
+    try {
+      for (const route of ["/", "/agents"]) {
+        const html = await renderer.render(route);
+        expect(html).toContain('<title>Getter Control</title>');
+        expect(html).toContain('<link rel="icon" href="/getter-control.svg" type="image/svg+xml" sizes="any" />');
+        expect(html).not.toContain('href="/favicon.svg"');
+        expect(html).not.toContain('href="/favicon.ico"');
+        expect(html).not.toContain('name="paperclip-worktree-enabled"');
+      }
+    } finally {
+      renderer.dispose();
     }
   });
 

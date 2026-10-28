@@ -29,6 +29,31 @@ afterEach(() => {
 });
 
 describe("resolveDatabaseTarget", () => {
+  it("does not read upstream database config or env from checkout ancestors", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "getter-control-db-isolation-"));
+    const projectDir = path.join(tempDir, "repo", "nested");
+    fs.mkdirSync(projectDir, { recursive: true });
+    process.chdir(projectDir);
+    process.env.GETTER_CONTROL_HOME = path.join(tempDir, "home");
+    delete process.env.PAPERCLIP_CONFIG;
+    delete process.env.PAPERCLIP_INSTANCE_ID;
+    delete process.env.DATABASE_URL;
+    writeJson(path.join(tempDir, "repo", ".paperclip", "config.json"), {
+      database: { mode: "postgres", connectionString: "postgres://upstream-placeholder/old" },
+    });
+    writeText(path.join(tempDir, "repo", ".paperclip", ".env"), "DATABASE_URL=postgres://upstream-placeholder/old\n");
+    try {
+      expect(resolveDatabaseTarget()).toMatchObject({
+        mode: "embedded-postgres",
+        dataDir: path.join(tempDir, "home", "instances", "default", "db"),
+        configPath: path.join(tempDir, "home", "instances", "default", "config.json"),
+      });
+    } finally {
+      process.chdir(ORIGINAL_CWD);
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("uses DATABASE_URL from process env first", () => {
     process.env.DATABASE_URL = "postgres://env-user:env-pass@db.example.com:5432/paperclip";
 
@@ -41,17 +66,17 @@ describe("resolveDatabaseTarget", () => {
     });
   });
 
-  it("uses DATABASE_URL from repo-local .paperclip/.env", () => {
+  it("uses DATABASE_URL from repo-local .getter-control/.env", () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-db-runtime-"));
     const projectDir = path.join(tempDir, "repo");
     fs.mkdirSync(projectDir, { recursive: true });
     process.chdir(projectDir);
     delete process.env.PAPERCLIP_CONFIG;
-    writeJson(path.join(projectDir, ".paperclip", "config.json"), {
+    writeJson(path.join(projectDir, ".getter-control", "config.json"), {
       database: { mode: "embedded-postgres", embeddedPostgresPort: 54329 },
     });
     writeText(
-      path.join(projectDir, ".paperclip", ".env"),
+      path.join(projectDir, ".getter-control", ".env"),
       'DATABASE_URL="postgres://file-user:file-pass@db.example.com:6543/paperclip"\n',
     );
 

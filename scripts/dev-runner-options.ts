@@ -55,6 +55,7 @@ export function applyDevRunnerOptions(
   const hasExplicitConfig = Boolean(env.PAPERCLIP_CONFIG?.trim());
   const hasExplicitContext = Boolean(env.PAPERCLIP_CONTEXT?.trim());
 
+  env.GETTER_CONTROL_HOME = dataDir;
   env.PAPERCLIP_HOME = dataDir;
   if (!hasExplicitConfig) {
     const instanceId = resolvePaperclipInstanceId(

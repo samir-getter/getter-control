@@ -14,9 +14,11 @@ export function expandHomePrefix(value: string): string {
 }
 
 export function resolvePaperclipHomeDir(homeOverride?: string): string {
-  const raw = homeOverride?.trim() || process.env.PAPERCLIP_HOME?.trim();
+  const raw = homeOverride?.trim()
+    || process.env.GETTER_CONTROL_HOME?.trim()
+    || process.env.PAPERCLIP_HOME?.trim();
   if (raw) return path.resolve(expandHomePrefix(raw));
-  return path.resolve(os.homedir(), ".paperclip");
+  return path.resolve(os.homedir(), ".getter-control");
 }
 
 export function resolvePaperclipInstanceId(instanceIdOverride?: string): string {

@@ -853,11 +853,10 @@ describe("paperclipai CLI invocation safety", () => {
   // env-lab cleanup hint runs from a source checkout and must work from any
   // subdirectory, so it uses the module-resolved direct-exec form (see below).
 
-  it("emits the onboard hint from the server startup banner", () => {
+  it("emits the Getter source repair hint from the server startup banner", () => {
     const source = read("server/src/startup-banner.ts");
-    expect(source).toContain("npx paperclipai onboard");
-    expect(source).not.toContain("pnpm paperclipai onboard");
-    expect(source).not.toContain("pnpm exec paperclipai onboard");
+    expect(source).toContain("pnpm getter-control");
+    expect(source).not.toContain("npx paperclipai onboard");
   });
 
   it("emits the safe run form from the client connection-error hint", () => {
@@ -890,7 +889,7 @@ describe("paperclipai CLI invocation safety", () => {
 
   it("emits the bootstrap fallback command from the UI", () => {
     const source = read("ui/src/bootstrapSetup.ts");
-    expect(source).toContain("npx paperclipai auth bootstrap-ceo");
+    expect(source).toContain("pnpm getter-control:cli auth bootstrap-ceo");
     expect(source).not.toContain("pnpm paperclipai auth bootstrap-ceo");
     expect(source).not.toContain("pnpm exec paperclipai auth bootstrap-ceo");
   });

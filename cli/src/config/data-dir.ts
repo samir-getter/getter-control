@@ -26,6 +26,7 @@ export function applyDataDirOverride(
   if (!rawDataDir) return null;
 
   const resolvedDataDir = path.resolve(expandHomePrefix(rawDataDir));
+  process.env.GETTER_CONTROL_HOME = resolvedDataDir;
   process.env.PAPERCLIP_HOME = resolvedDataDir;
 
   if (support.hasConfigOption) {

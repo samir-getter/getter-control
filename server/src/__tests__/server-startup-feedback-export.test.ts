@@ -34,6 +34,7 @@ const {
   detectPortMock,
   deriveAuthTrustedOriginsMock,
   deliveryWorkRegisterMock,
+  deliveryWorkStopMock,
   deliveryWorkErrors,
   environmentCustomImagesServiceMock,
   environmentCustomImagesServiceFactoryMock,
@@ -64,13 +65,14 @@ const {
     retryMs?: number;
     run: (signal?: AbortSignal) => Promise<unknown>;
     hasPending?: () => Promise<boolean>;
-  }) => ({ ready: task.run(new AbortController().signal).catch(error => { deliveryWorkErrors.push({ queue, error }); }), wake: vi.fn() }));
+  }) => ({ ready: task.run(new AbortController().signal).catch(error => { deliveryWorkErrors.push({ queue, error }); }), wake: vi.fn(), stop: vi.fn(async () => {}) }));
+  const deliveryWorkStopMock = vi.fn(async () => {});
   const createAppMock = vi.fn(async () => Object.assign((_: unknown, __: unknown) => {}, {
     locals: {
       fastResponses: { hasPending: vi.fn(async () => false), sweepPending: vi.fn(async () => undefined) },
       deliveryWork: {
         register: deliveryWorkRegisterMock,
-        stop: vi.fn(async () => {}),
+        stop: deliveryWorkStopMock,
       },
       toolGateway: {
         settleInterruptedActionReviews: vi.fn(async () => ({ scanned: 0 })),
@@ -103,6 +105,7 @@ const {
     reason: null,
   }));
   const heartbeatServiceMock = {
+    drainActiveRunExecutions: vi.fn(async () => {}),
     reconcileCostAccounting: vi.fn(async () => ({ scanned: 0, accounted: 0 })),
     resolveSchedulingSuppression: resolveHeartbeatSchedulingSuppressionMock,
     recoverNativeRunsAfterRestart: vi.fn(async () => ({
@@ -199,6 +202,7 @@ const {
     detectPortMock,
     deriveAuthTrustedOriginsMock,
     deliveryWorkRegisterMock,
+    deliveryWorkStopMock,
     deliveryWorkErrors,
     environmentCustomImagesServiceMock,
     environmentCustomImagesServiceFactoryMock,
@@ -1141,6 +1145,63 @@ describe("startServer feedback export wiring", () => {
       expect(heartbeatIntervals).toHaveLength(1);
     } finally {
       setIntervalSpy.mockRestore();
+    }
+  });
+
+  it.each([false, true])("stops registering startup housekeeping after shutdown while awaiting active work (failure=%s)", async fails => {
+    loadConfigMock.mockReturnValue(buildTestConfig({
+      heartbeatSchedulerEnabled: true,
+      heartbeatSchedulerIntervalMs: 30000,
+    }));
+    const activeFailure = new Error("active cleanup failure");
+    let releaseCleanup: (() => void) | undefined;
+    environmentCustomImagesServiceMock.cleanupExpiredSetupSessions.mockImplementationOnce(() =>
+      new Promise((resolve, reject) => {
+        releaseCleanup = () => fails ? reject(activeFailure) : resolve({ scanned: 0, timedOut: 0, failed: 0 });
+      }));
+    let coordinatorStopped = false;
+    const register = deliveryWorkRegisterMock.getMockImplementation()!;
+    deliveryWorkRegisterMock.mockImplementation((queue, task) => {
+      if (coordinatorStopped) throw new Error("Delivery coordinator is stopped");
+      return register(queue, task);
+    });
+    const heartbeatIntervals: Array<() => void> = [];
+    const intervals = vi.spyOn(globalThis, "setInterval").mockImplementation(((callback: () => void, ms: number) => {
+      if (ms === 30000) heartbeatIntervals.push(callback);
+      return 1 as unknown as ReturnType<typeof setInterval>;
+    }) as typeof setInterval);
+    let shutdown: Promise<void> | undefined;
+    try {
+      const started = await startServer();
+      await settleStartupHousekeeping();
+      expect(releaseCleanup).toBeDefined();
+      const activeIndex = deliveryWorkRegisterMock.mock.calls.findIndex(([queue]) => queue === DELIVERY_QUEUES.customImageExpiry);
+      const activeReady = deliveryWorkRegisterMock.mock.results[activeIndex].value.ready;
+      const registrationsBeforeStop = deliveryWorkRegisterMock.mock.calls.length;
+      deliveryWorkStopMock.mockImplementationOnce(async () => {
+        coordinatorStopped = true;
+        await activeReady;
+      });
+      let shutdownFinished = false;
+      shutdown = started.shutdown().then(() => { shutdownFinished = true; });
+      void shutdown.catch(() => {});
+      await settleStartupHousekeeping();
+      expect(coordinatorStopped).toBe(true);
+      expect(shutdownFinished).toBe(false);
+      releaseCleanup!();
+      await shutdown;
+
+      expect(deliveryWorkRegisterMock).toHaveBeenCalledTimes(registrationsBeforeStop);
+      expect(heartbeatIntervals).toHaveLength(0);
+      expect(deliveryWorkErrors.filter(({ queue }) => queue === DELIVERY_QUEUES.customImageExpiry))
+        .toEqual(fails ? [{ queue: DELIVERY_QUEUES.customImageExpiry, error: activeFailure }] : []);
+      expect(vi.mocked(logger.error).mock.calls.some(([, message]) => message === "startup housekeeping step failed")).toBe(false);
+      expect(shutdownFinished).toBe(true);
+    } finally {
+      releaseCleanup?.();
+      deliveryWorkRegisterMock.mockImplementation(register);
+      intervals.mockRestore();
+      await shutdown;
     }
   });
 

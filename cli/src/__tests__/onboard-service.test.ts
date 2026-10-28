@@ -2,8 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  ensureServiceShim,
-  handleOnboardService,
+  ensureManagedServiceShim as ensureServiceShim,
+  handleManagedOnboardService as handleOnboardService,
+  ensureServiceShim as getterEnsureServiceShim,
+  handleOnboardService as getterHandleOnboardService,
   handoffToOnboardedService,
   isInstallableReleaseVersion,
   resolveOnboardServiceDashboardUrl,
@@ -43,6 +45,17 @@ it("does not install a missing shim when installation is disabled", async () => 
     reason: `no executable exists at ${resolveServiceShimPath()}`,
   });
   expect(installCommand).not.toHaveBeenCalled();
+});
+
+it("does not auto-install an upstream npm release during Getter Control onboarding", async () => {
+  vi.mocked(isExecutableFile).mockResolvedValue(false);
+  vi.mocked(readInstallManifest).mockReturnValue(null);
+  const result = await ensureServiceShim();
+  expect(result.ok).toBe(false);
+  expect(result.installedNow).toBe(false);
+  expect(result.reason).toContain("Managed installation, payload updates, rollback, and system services are unavailable");
+  expect(installCommand).not.toHaveBeenCalled();
+  expect(writeManagedShim).not.toHaveBeenCalled();
 });
 
 it("restores a missing shim without reinstalling the managed payload", async () => {
@@ -362,5 +375,45 @@ describe("shouldOfferForegroundStart", () => {
 
   it("never prompts without an interactive terminal", () => {
     expect(shouldOfferForegroundStart({ ...base, interactive: false })).toBe(false);
+  });
+});
+
+describe("Getter Control source onboarding guard", () => {
+  it("does not inspect or restore even an existing managed shim", async () => {
+    vi.mocked(isExecutableFile).mockResolvedValue(true);
+    const result = await getterEnsureServiceShim();
+    expect(result).toMatchObject({ ok: false, installedNow: false });
+    expect(result.reason).toContain("Managed installation, payload updates, rollback, and system services are unavailable");
+    expect(isExecutableFile).not.toHaveBeenCalled();
+    expect(readInstallManifest).not.toHaveBeenCalled();
+    expect(smokePayload).not.toHaveBeenCalled();
+    expect(writeManagedShim).not.toHaveBeenCalled();
+    expect(installCommand).not.toHaveBeenCalled();
+  });
+
+  it("does not detect, repair, install, or start a service when explicitly requested", async () => {
+    const detect = vi.fn();
+    const ensureServiceShim = vi.fn();
+    const confirm = vi.fn();
+    const warn = vi.fn();
+    expect(await getterHandleOnboardService({ installService: true, yes: true }, {
+      detect, ensureServiceShim, confirm, warn,
+    })).toBe(false);
+    expect(detect).not.toHaveBeenCalled();
+    expect(ensureServiceShim).not.toHaveBeenCalled();
+    expect(confirm).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("run `pnpm getter-control`"));
+  });
+
+  it("does not suggest managed services during normal source onboarding", async () => {
+    const detect = vi.fn();
+    const isInteractive = vi.fn(() => true);
+    const warn = vi.fn();
+    const info = vi.fn();
+    expect(await getterHandleOnboardService({}, { detect, isInteractive, warn, info })).toBe(false);
+    expect(detect).not.toHaveBeenCalled();
+    expect(isInteractive).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+    expect(info).not.toHaveBeenCalled();
   });
 });
